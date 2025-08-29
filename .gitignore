@@ -5,6 +5,7 @@
 __pycache__/*.pyc
 config/__pycache__/*.pyc
 db/__pycache__/*.pyc
+fsm/__pycache__/*.pyc
 handlers/__pycache__/*.pyc
 keyboards/__pycache__/*.pyc
 middlewares/__pycache__/*.pyc
