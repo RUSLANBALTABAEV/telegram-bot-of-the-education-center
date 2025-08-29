@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Mapped, DeclarativeBase, mapped_column, relationship
 from sqlalchemy import BigInteger, String, Integer, ForeignKey, Table, Column, select
-from sqlalchemy.ext.asyncio import AsyncAttrs
-
+from sqlalchemy.ext.asyncio import AsyncAttrs, create_async_engine, async_sessionmaker
+from config.bot_config import SQLALCHEMY_URL
 
 # Базовый класс моделей
 class Base(AsyncAttrs, DeclarativeBase):
@@ -36,9 +36,16 @@ class Course(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(100), unique=True)
     description: Mapped[str] = mapped_column(String(255), nullable=True)
-    price: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 💲 цена курса
+    price: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     users = relationship("User", secondary=user_course, back_populates="courses")
+
+
+# Создаём движок
+engine = create_async_engine(SQLALCHEMY_URL, echo=True)
+
+# Создаём фабрику сессий
+async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 
 # Создание таблиц
@@ -49,7 +56,6 @@ async def create_db(engine):
 
 # Заполнение базовых курсов
 async def seed_courses(engine):
-    from db.session import async_session
     async with async_session() as session:
         result = await session.execute(select(Course))
         courses = result.scalars().all()
