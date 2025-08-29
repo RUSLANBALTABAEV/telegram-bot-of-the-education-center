@@ -2,21 +2,22 @@ import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command
 from config.bot_config import API_TOKEN
-from aiogram.types import FSInputFile, KeyboardButton, ReplyKeyboardMarkup
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from keyboards.reply import main_menu  # импортируем клавиатуру
 
 bot = Bot(API_TOKEN)
 dp = Dispatcher()
 
 TEXT = '''
-/help - справочный текст
+/help - справочный информация
 /start - запуск бота
 '''
 
 @dp.message(Command('start'))
 async def start_command(message: types.Message):
-    await message.answer('Привет, я бот!')
-
+    await message.answer(
+        'Чтобы продолжить использовать бота, требуется…:',
+        reply_markup=main_menu()
+    )
 
 @dp.message(Command('help', prefix='$/'))
 async def help_command(message: types.Message):
@@ -24,7 +25,6 @@ async def help_command(message: types.Message):
 
 
 async def main():
-
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
