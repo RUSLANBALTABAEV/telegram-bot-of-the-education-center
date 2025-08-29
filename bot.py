@@ -3,6 +3,7 @@ from aiogram import Bot, Dispatcher
 from config.bot_config import API_TOKEN
 from handlers.registration import registration_router
 from handlers.auth import auth_router
+from handlers.start import start_router 
 from db.models import create_db
 from db.session import engine
 
@@ -14,6 +15,7 @@ async def main():
     # Создаём таблицы (если их ещё нет)
     await create_db(engine)
     # Подключаем роутеры
+    dp.include_router(start_router)
     dp.include_router(registration_router)
     dp.include_router(auth_router)
 
