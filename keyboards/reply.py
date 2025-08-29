@@ -7,6 +7,7 @@ def main_menu():
     builder.row(KeyboardButton(text='Регистрация'))
     builder.row(KeyboardButton(text='Авторизация'))
     builder.row(KeyboardButton(text='Курсы'))
-    builder.row(KeyboardButton(text='Отписаться'))
+    builder.row(KeyboardButton(text='Мои курсы'))   # новая кнопка
+    builder.row(KeyboardButton(text='Отписаться'))  # если хочешь оставить отписку от всех
     builder.row(KeyboardButton(text='Выход'))
     return builder.as_markup(resize_keyboard=True)

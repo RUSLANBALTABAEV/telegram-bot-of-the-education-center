@@ -38,7 +38,6 @@ async def enroll_course(message: types.Message, state: FSMContext):
     course_name = message.text.strip()
 
     async with async_session() as session:
-        # Проверяем курс
         result = await session.execute(select(Course).where(Course.title == course_name))
         course = result.scalar_one_or_none()
 
@@ -46,7 +45,6 @@ async def enroll_course(message: types.Message, state: FSMContext):
             await message.answer("⚠️ Такого курса нет. Попробуйте снова.")
             return
 
-        # Загружаем пользователя вместе с курсами (selectinload!)
         result = await session.execute(
             select(User).options(selectinload(User.courses)).where(User.user_id == message.from_user.id)
         )
@@ -68,23 +66,53 @@ async def enroll_course(message: types.Message, state: FSMContext):
     await state.clear()
 
 
-# --- Отписка ---
-@courses_router.message(Command("unsubscribe"))
-@courses_router.message(F.text == "Отписаться")
-async def unsubscribe_course(message: types.Message):
+# --- Мои курсы ---
+@courses_router.message(Command("mycourses"))
+@courses_router.message(F.text == "Мои курсы")
+async def my_courses(message: types.Message, state: FSMContext):
     async with async_session() as session:
-        # Загружаем пользователя вместе с курсами
         result = await session.execute(
             select(User).options(selectinload(User.courses)).where(User.user_id == message.from_user.id)
         )
         user = result.scalar_one_or_none()
 
-        if not user or not user.courses:
-            await message.answer("⚠️ Вы ещё не записаны ни на один курс.")
+    if not user or not user.courses:
+        await message.answer("⚠️ У вас пока нет записей на курсы.")
+        return
+
+    text = "📚 Вы записаны на курсы:\n\n"
+    for course in user.courses:
+        text += f"▫️ {course.title}\n"
+
+    text += "\nЧтобы отписаться от курса, напишите его название."
+    await message.answer(text)
+    await state.set_state(CourseFSM.unsubscribe_course)
+
+
+# --- Отписка от одного курса ---
+@courses_router.message(CourseFSM.unsubscribe_course, F.text)
+async def unsubscribe_one(message: types.Message, state: FSMContext):
+    course_name = message.text.strip()
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).options(selectinload(User.courses)).where(User.user_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+
+        if not user:
+            await message.answer("⚠️ Сначала зарегистрируйтесь (/register).")
+            await state.clear()
             return
 
-        # Отписываем от всех курсов
-        user.courses.clear()
-        session.add(user)
-        await session.commit()
-        await message.answer("🚪 Вы отписались от всех курсов.")
+        course_to_remove = next((c for c in user.courses if c.title == course_name), None)
+
+        if not course_to_remove:
+            await message.answer("⚠️ Вы не записаны на этот курс.")
+        else:
+            user.courses.remove(course_to_remove)
+            session.add(user)
+            await session.commit()
+            await message.answer(f"🚪 Вы отписались от курса «{course_to_remove.title}».")
+
+    await state.clear()
