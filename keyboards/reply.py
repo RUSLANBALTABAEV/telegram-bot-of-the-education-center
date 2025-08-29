@@ -6,4 +6,5 @@ def main_menu():
     builder = ReplyKeyboardBuilder()
     builder.row(KeyboardButton(text='Регистрация'))
     builder.row(KeyboardButton(text='Авторизация'))
+    builder.row(KeyboardButton(text='Выход'))   # <--- новая кнопка
     return builder.as_markup(resize_keyboard=True)

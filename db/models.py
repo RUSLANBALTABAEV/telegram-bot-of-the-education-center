@@ -13,11 +13,11 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)  # Telegram user_id
-    name: Mapped[str] = mapped_column(String(100))  # имя
-    age: Mapped[int] = mapped_column(Integer, nullable=True)  # возраст
-    phone: Mapped[str] = mapped_column(String(20), nullable=True)  # телефон
-    photo: Mapped[str] = mapped_column(String, nullable=True)  # путь/ссылка на фото
+    user_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True, nullable=True)  # Telegram user_id теперь nullable
+    name: Mapped[str] = mapped_column(String(100))
+    age: Mapped[int] = mapped_column(Integer, nullable=True)
+    phone: Mapped[str] = mapped_column(String(20), nullable=True)
+    photo: Mapped[str] = mapped_column(String, nullable=True)
 
 
 # Создание таблиц
