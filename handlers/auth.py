@@ -20,7 +20,6 @@ async def start_auth(message: types.Message, state: FSMContext):
         await message.answer("Введите ваш номер телефона (в формате +79998887766):")
         await state.set_state(Auth.phone)
 
-
 @auth_router.message(Auth.phone, F.text.regexp(r"^\+?\d{10,15}$"))
 async def process_phone_auth(message: types.Message, state: FSMContext):
     async with async_session() as session:
@@ -39,7 +38,6 @@ async def process_phone_auth(message: types.Message, state: FSMContext):
             await message.answer("⚠️ Пользователь не найден. Используйте /register.")
 
     await state.clear()
-
 
 @auth_router.message(Command("logout"))
 @auth_router.message(F.text == "Выход")

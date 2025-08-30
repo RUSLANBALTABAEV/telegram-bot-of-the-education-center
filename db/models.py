@@ -3,19 +3,16 @@ from sqlalchemy import BigInteger, String, Integer, ForeignKey, Table, Column, s
 from sqlalchemy.ext.asyncio import AsyncAttrs, create_async_engine, async_sessionmaker
 from config.bot_config import SQLALCHEMY_URL
 
-# Базовый класс моделей
 class Base(AsyncAttrs, DeclarativeBase):
     pass
 
-
-# Таблица-связка "пользователь-курс"
+# Связка пользователь-курс
 user_course = Table(
     "user_course",
     Base.metadata,
     Column("user_id", ForeignKey("users.id"), primary_key=True),
     Column("course_id", ForeignKey("courses.id"), primary_key=True),
 )
-
 
 class User(Base):
     __tablename__ = "users"
@@ -29,7 +26,6 @@ class User(Base):
 
     courses = relationship("Course", secondary=user_course, back_populates="users")
 
-
 class Course(Base):
     __tablename__ = "courses"
 
@@ -40,21 +36,14 @@ class Course(Base):
 
     users = relationship("User", secondary=user_course, back_populates="courses")
 
-
-# Создаём движок
+# Движок и сессия
 engine = create_async_engine(SQLALCHEMY_URL, echo=True)
-
-# Создаём фабрику сессий
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
-
-# Создание таблиц
 async def create_db(engine):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-
-# Заполнение базовых курсов
 async def seed_courses(engine):
     async with async_session() as session:
         result = await session.execute(select(Course))

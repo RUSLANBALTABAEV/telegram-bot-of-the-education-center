@@ -20,13 +20,11 @@ async def start_registration(message: types.Message, state: FSMContext):
         await message.answer("Введите ваше имя:")
         await state.set_state(Registration.name)
 
-
 @registration_router.message(Registration.name, F.text)
 async def process_name(message: types.Message, state: FSMContext):
     await state.update_data(name=message.text)
     await message.answer("Введите ваш возраст:")
     await state.set_state(Registration.age)
-
 
 @registration_router.message(Registration.age, F.text.regexp(r"^\d{1,3}$"))
 async def process_age(message: types.Message, state: FSMContext):
@@ -34,13 +32,11 @@ async def process_age(message: types.Message, state: FSMContext):
     await message.answer("Введите ваш номер телефона (в формате +79998887766):")
     await state.set_state(Registration.phone)
 
-
 @registration_router.message(Registration.phone, F.text.regexp(r"^\+?\d{10,15}$"))
 async def process_phone(message: types.Message, state: FSMContext):
     await state.update_data(phone=message.text)
     await message.answer("Отправьте вашу фотографию:")
     await state.set_state(Registration.photo)
-
 
 @registration_router.message(Registration.photo, F.photo)
 async def process_photo(message: types.Message, state: FSMContext):
