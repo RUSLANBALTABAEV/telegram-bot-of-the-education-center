@@ -10,6 +10,7 @@ admin_router = Router()
 
 # --- Добавление курса ---
 @admin_router.message(Command("addcourse"))
+@admin_router.message(F.text == "Добавить курс")  # ✅ кнопка
 async def start_add_course(message: types.Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
         await message.answer("⛔ У вас нет прав для добавления курсов.")
