@@ -6,7 +6,7 @@ from config.bot_config import SQLALCHEMY_URL
 class Base(AsyncAttrs, DeclarativeBase):
     pass
 
-# Связка пользователь-курс
+# Таблица связки пользователей и курсов
 user_course = Table(
     "user_course",
     Base.metadata,
