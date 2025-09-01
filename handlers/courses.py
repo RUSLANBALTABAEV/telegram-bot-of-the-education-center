@@ -25,6 +25,7 @@ async def build_courses_message():
     )
     return text, keyboard
 
+
 # --- /courses ---
 @courses_router.message(Command("courses"))
 @courses_router.message(F.text == "Курсы")
@@ -35,11 +36,16 @@ async def show_courses(message):
     else:
         await message.answer(text, reply_markup=keyboard)
 
+
 # --- Информация о курсе ---
 @courses_router.callback_query(F.data.startswith("course:"))
 async def show_course_info(callback: CallbackQuery):
     course_id = int(callback.data.split(":")[1])
     async with async_session() as session:
+        result = await session.execute(
+            select(User).options(selectinload(User.courses)).where(User.user_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
         course = await session.get(Course, course_id)
 
     if not course:
@@ -51,13 +57,21 @@ async def show_course_info(callback: CallbackQuery):
         f"{course.description}\n\n"
         f"💰 Цена: {course.price} руб."
     )
+
+    # если пользователь авторизован и уже записан — показать кнопку "Отписаться"
+    if user and course in user.courses:
+        action_button = InlineKeyboardButton(text="🚪 Отписаться", callback_data=f"unenroll:{course.id}")
+    else:
+        action_button = InlineKeyboardButton(text="✅ Записаться", callback_data=f"enroll:{course.id}")
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="✅ Записаться", callback_data=f"enroll:{course.id}")],
+            [action_button],
             [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_courses")]
         ]
     )
     await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+
 
 # --- Запись на курс ---
 @courses_router.callback_query(F.data.startswith("enroll:"))
@@ -85,6 +99,35 @@ async def enroll_course(callback: CallbackQuery):
             session.add(user)
             await session.commit()
             await callback.message.edit_text(f"✅ Вы успешно записались на курс «{course.title}»!")
+
+
+# --- Отписка от курса ---
+@courses_router.callback_query(F.data.startswith("unenroll:"))
+async def unenroll_course(callback: CallbackQuery):
+    course_id = int(callback.data.split(":")[1])
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).options(selectinload(User.courses)).where(User.user_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+
+        if not user:
+            await callback.answer("⚠️ Сначала зарегистрируйтесь (/register) или войдите (/login).", show_alert=True)
+            return
+
+        course = await session.get(Course, course_id)
+        if not course:
+            await callback.answer("⚠️ Курс не найден.", show_alert=True)
+            return
+
+        if course not in user.courses:
+            await callback.answer("⚠️ Вы не записаны на этот курс.", show_alert=True)
+        else:
+            user.courses.remove(course)
+            session.add(user)
+            await session.commit()
+            await callback.message.edit_text(f"🚪 Вы отписались от курса «{course.title}».")
+
 
 # --- Назад к списку ---
 @courses_router.callback_query(F.data == "back_to_courses")

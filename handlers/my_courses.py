@@ -10,7 +10,6 @@ from config.bot_config import ADMIN_ID
 
 my_courses_router = Router()
 
-
 # --- FSM для редактирования курса ---
 class CourseEditFSM(StatesGroup):
     waiting_for_price = State()
@@ -24,11 +23,9 @@ class CourseEditFSM(StatesGroup):
 async def show_my_courses(message: types.Message):
     async with async_session() as session:
         if message.from_user.id == ADMIN_ID:
-            # админ видит все курсы
             result = await session.execute(select(Course))
             courses = result.scalars().all()
         else:
-            # обычный пользователь видит только свои
             result = await session.execute(
                 select(User).options(selectinload(User.courses)).where(User.user_id == message.from_user.id)
             )
@@ -57,6 +54,10 @@ async def show_my_courses(message: types.Message):
 async def my_course_info(callback: CallbackQuery):
     course_id = int(callback.data.split(":")[1])
     async with async_session() as session:
+        result = await session.execute(
+            select(User).options(selectinload(User.courses)).where(User.user_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
         course = await session.get(Course, course_id)
 
     if not course:
@@ -86,6 +87,10 @@ async def my_course_info(callback: CallbackQuery):
                 InlineKeyboardButton(text="🗑 Удалить", callback_data=f"delcourse:{course.id}"),
             ]
         )
+    else:
+        # для обычного пользователя — возможность отписки
+        if user and course in user.courses:
+            keyboard.insert(0, [InlineKeyboardButton(text="🚪 Отписаться", callback_data=f"unenroll_my:{course.id}")])
 
     await callback.message.edit_text(
         text,
@@ -94,151 +99,25 @@ async def my_course_info(callback: CallbackQuery):
     )
 
 
-# --- Возврат к списку ---
-@my_courses_router.callback_query(F.data == "back_to_mycourses")
-async def back_to_my_courses(callback: CallbackQuery):
+# --- Отписка из моих курсов ---
+@my_courses_router.callback_query(F.data.startswith("unenroll_my:"))
+async def unenroll_my_course(callback: CallbackQuery):
+    course_id = int(callback.data.split(":")[1])
     async with async_session() as session:
-        if callback.from_user.id == ADMIN_ID:
-            result = await session.execute(select(Course))
-            courses = result.scalars().all()
+        result = await session.execute(
+            select(User).options(selectinload(User.courses)).where(User.user_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        course = await session.get(Course, course_id)
+
+        if not user or not course:
+            await callback.answer("⚠️ Ошибка. Попробуйте позже.", show_alert=True)
+            return
+
+        if course not in user.courses:
+            await callback.answer("⚠️ Вы не записаны на этот курс.", show_alert=True)
         else:
-            result = await session.execute(
-                select(User).options(selectinload(User.courses)).where(User.user_id == callback.from_user.id)
-            )
-            user = result.scalar_one_or_none()
-            courses = user.courses if user else []
-
-    if not courses:
-        await callback.message.edit_text("📭 Курсов пока нет.")
-        return
-
-    text = "📘 Ваши курсы:" if callback.from_user.id != ADMIN_ID else "📘 Все доступные курсы:"
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=course.title, callback_data=f"mycourse:{course.id}")]
-            for course in courses
-        ]
-    )
-    await callback.message.edit_text(text, reply_markup=keyboard)
-    await callback.answer()
-
-
-# --- Удаление курса (только админ) ---
-@my_courses_router.callback_query(F.data.startswith("delcourse:"))
-async def delete_course(callback: CallbackQuery):
-    if callback.from_user.id != ADMIN_ID:
-        await callback.answer("⛔ У вас нет прав для удаления курсов.", show_alert=True)
-        return
-
-    course_id = int(callback.data.split(":")[1])
-    async with async_session() as session:
-        course = await session.get(Course, course_id)
-        if not course:
-            await callback.answer("⚠️ Курс не найден.", show_alert=True)
-            return
-        await session.delete(course)
-        await session.commit()
-
-    await callback.message.edit_text(f"🗑 Курс «{course.title}» удалён!")
-
-
-# --- Изменение цены ---
-@my_courses_router.callback_query(F.data.startswith("edit_price:"))
-async def edit_price(callback: CallbackQuery, state: FSMContext):
-    if callback.from_user.id != ADMIN_ID:
-        await callback.answer("⛔ Нет прав.", show_alert=True)
-        return
-
-    course_id = int(callback.data.split(":")[1])
-    await state.update_data(course_id=course_id)
-    await state.set_state(CourseEditFSM.waiting_for_price)
-
-    await callback.message.answer("💰 Введите новую цену курса (число):")
-
-
-@my_courses_router.message(CourseEditFSM.waiting_for_price, F.text.regexp(r"^\d+$"))
-async def process_new_price(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    course_id = data.get("course_id")
-    new_price = int(message.text)
-
-    async with async_session() as session:
-        course = await session.get(Course, course_id)
-        if not course:
-            await message.answer("⚠️ Курс не найден.")
-            await state.clear()
-            return
-
-        course.price = new_price
-        await session.commit()
-
-    await message.answer(f"✅ Цена курса «{course.title}» изменена на {new_price} руб.")
-    await state.clear()
-
-
-# --- Изменение названия ---
-@my_courses_router.callback_query(F.data.startswith("edit_title:"))
-async def edit_title(callback: CallbackQuery, state: FSMContext):
-    if callback.from_user.id != ADMIN_ID:
-        await callback.answer("⛔ Нет прав.", show_alert=True)
-        return
-
-    course_id = int(callback.data.split(":")[1])
-    await state.update_data(course_id=course_id)
-    await state.set_state(CourseEditFSM.waiting_for_title)
-
-    await callback.message.answer("✏️ Введите новое название курса:")
-
-
-@my_courses_router.message(CourseEditFSM.waiting_for_title)
-async def process_new_title(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    course_id = data.get("course_id")
-    new_title = message.text.strip()
-
-    async with async_session() as session:
-        course = await session.get(Course, course_id)
-        if not course:
-            await message.answer("⚠️ Курс не найден.")
-            await state.clear()
-            return
-
-        course.title = new_title
-        await session.commit()
-
-    await message.answer(f"✅ Название изменено на «{new_title}».")
-    await state.clear()
-
-
-# --- Изменение описания ---
-@my_courses_router.callback_query(F.data.startswith("edit_desc:"))
-async def edit_desc(callback: CallbackQuery, state: FSMContext):
-    if callback.from_user.id != ADMIN_ID:
-        await callback.answer("⛔ Нет прав.", show_alert=True)
-        return
-
-    course_id = int(callback.data.split(":")[1])
-    await state.update_data(course_id=course_id)
-    await state.set_state(CourseEditFSM.waiting_for_description)
-
-    await callback.message.answer("📝 Введите новое описание курса:")
-
-
-@my_courses_router.message(CourseEditFSM.waiting_for_description)
-async def process_new_description(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    course_id = data.get("course_id")
-    new_desc = message.text.strip()
-
-    async with async_session() as session:
-        course = await session.get(Course, course_id)
-        if not course:
-            await message.answer("⚠️ Курс не найден.")
-            await state.clear()
-            return
-
-        course.description = new_desc
-        await session.commit()
-
-    await message.answer("✅ Описание курса обновлено.")
-    await state.clear()
+            user.courses.remove(course)
+            session.add(user)
+            await session.commit()
+            await callback.message.edit_text(f"🚪 Вы отписались от курса «{course.title}».")
