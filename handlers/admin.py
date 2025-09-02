@@ -11,24 +11,33 @@ from aiogram.fsm.context import FSMContext
 
 admin_router = Router()
 
-# --- Главное меню админа ---
-@admin_router.message(F.text == "Управление курсами и пользователями")
-async def admin_main_menu(message: Message):
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("⛔ Нет доступа.")
-        return
 
-    keyboard = InlineKeyboardMarkup(
+# --- Главное меню админа ---
+def admin_main_keyboard():
+    return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="Список пользователей", callback_data="show_users")],
             [InlineKeyboardButton(text="Управление курсами", callback_data="manage_courses")],
             [InlineKeyboardButton(text="Добавить курс", callback_data="add_course")]
         ]
     )
-    await message.answer("👤 Меню администратора:", reply_markup=keyboard)
 
 
-# --- Показ пользователей ---
+def admin_back_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text="🔝 Главное меню администратора", callback_data="admin_menu")]]
+    )
+
+
+@admin_router.message(F.text == "Управление курсами и пользователями")
+async def admin_main_menu(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Нет доступа.")
+        return
+    await message.answer("👤 Меню администратора:", reply_markup=admin_main_keyboard())
+
+
+# --- Просмотр пользователей с фото и документами ---
 @admin_router.callback_query(F.data == "show_users")
 async def show_users(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
@@ -36,7 +45,7 @@ async def show_users(callback: CallbackQuery):
         return
 
     async with async_session() as session:
-        result = await session.execute(select(User).options(selectinload(User.courses)))
+        result = await session.execute(select(User))
         users = result.scalars().all()
 
     if not users:
@@ -44,16 +53,17 @@ async def show_users(callback: CallbackQuery):
         await callback.answer()
         return
 
-    text = "👥 Пользователи:\n"
-    for u in users:
-        text += f"• {u.name} ({u.phone or 'не указан'})\n"
+    for user in users:
+        text = f"👤 {user.name} ({user.phone or 'не указан'})"
+        await callback.message.answer(text)
 
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="admin_menu")]
-        ]
-    )
-    await callback.message.edit_text(text, reply_markup=keyboard)
+        if user.photo:
+            await callback.message.answer_photo(user.photo, caption="Фото пользователя")
+
+        if user.document:
+            await callback.message.answer_document(user.document, caption="Документ пользователя")
+
+    await callback.message.answer("⬆️ Вернитесь в главное меню администратора:", reply_markup=admin_back_keyboard())
     await callback.answer()
 
 
@@ -87,10 +97,7 @@ async def manage_courses(callback: CallbackQuery):
             reply_markup=keyboard
         )
 
-    keyboard_back = InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="🔙 Назад", callback_data="admin_menu")]]
-    )
-    await callback.message.answer("Вы вернулись в меню админа:", reply_markup=keyboard_back)
+    await callback.message.answer("⬆️ Вернитесь в главное меню администратора:", reply_markup=admin_back_keyboard())
     await callback.answer()
 
 
@@ -98,17 +105,10 @@ async def manage_courses(callback: CallbackQuery):
 @admin_router.callback_query(F.data == "admin_menu")
 async def back_to_admin_menu(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
-        await callback.answer("⛔ Нет доступа.", show_alert=True)
+        await callback.answer("⛔ Нет доступа", show_alert=True)
         return
 
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="Список пользователей", callback_data="show_users")],
-            [InlineKeyboardButton(text="Управление курсами", callback_data="manage_courses")],
-            [InlineKeyboardButton(text="Добавить курс", callback_data="add_course")]
-        ]
-    )
-    await callback.message.edit_text("👤 Меню администратора:", reply_markup=keyboard)
+    await callback.message.edit_text("👤 Меню администратора:", reply_markup=admin_main_keyboard())
     await callback.answer()
 
 
@@ -116,7 +116,7 @@ async def back_to_admin_menu(callback: CallbackQuery):
 @admin_router.callback_query(F.data.startswith("delete_course:"))
 async def delete_course(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
-        await callback.answer("⛔ Нет доступа.", show_alert=True)
+        await callback.answer("⛔ Нет доступа", show_alert=True)
         return
 
     course_id = int(callback.data.split(":")[1])
@@ -142,7 +142,7 @@ async def add_course_start(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-# --- Редактирование курса (начало) ---
+# --- Редактирование курса ---
 @admin_router.callback_query(F.data.startswith("edit_course:"))
 async def edit_course_start(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id != ADMIN_ID:
@@ -170,6 +170,7 @@ async def process_course_title(message: Message, state: FSMContext):
     await message.answer("Введите описание курса (или '-' для пустого):")
     await state.set_state(CourseFSM.description)
 
+
 @admin_router.message(CourseFSM.description)
 async def process_course_description(message: Message, state: FSMContext):
     desc = message.text.strip()
@@ -178,6 +179,7 @@ async def process_course_description(message: Message, state: FSMContext):
     await state.update_data(description=desc)
     await message.answer("Введите цену курса (числом):")
     await state.set_state(CourseFSM.price)
+
 
 @admin_router.message(CourseFSM.price)
 async def process_course_price(message: Message, state: FSMContext):
@@ -209,8 +211,5 @@ async def process_course_price(message: Message, state: FSMContext):
             await session.commit()
             await message.answer(f"✅ Курс «{course.title}» успешно добавлен!")
 
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="🔙 Назад", callback_data="admin_menu")]]
-    )
-    await message.answer("Вы вернулись в меню администратора:", reply_markup=keyboard)
+    await message.answer("⬆️ Вернитесь в главное меню администратора:", reply_markup=admin_back_keyboard())
     await state.clear()
