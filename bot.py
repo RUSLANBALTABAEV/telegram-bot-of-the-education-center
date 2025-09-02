@@ -22,7 +22,7 @@ async def main():
     dp.include_router(auth_router)
     dp.include_router(courses_router)
     dp.include_router(my_courses_router)
-    dp.include_router(admin_router)  # ✅ настоящий admin_router
+    dp.include_router(admin_router)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)

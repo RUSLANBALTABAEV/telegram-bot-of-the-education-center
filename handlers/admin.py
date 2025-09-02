@@ -2,7 +2,8 @@ from aiogram import Router, F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
-from db.models import Course, async_session
+from sqlalchemy.orm import selectinload
+from db.models import Course, User, async_session
 from fsm.courses import CourseFSM
 from config.bot_config import ADMIN_ID
 
@@ -10,7 +11,7 @@ admin_router = Router()
 
 # --- Добавление курса ---
 @admin_router.message(Command("addcourse"))
-@admin_router.message(F.text == "Добавить курс")  # ✅ кнопка
+@admin_router.message(F.text == "Добавить курс")
 async def start_add_course(message: types.Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
         await message.answer("⛔ У вас нет прав для добавления курсов.")
@@ -45,56 +46,35 @@ async def process_course_price(message: types.Message, state: FSMContext):
     await message.answer(f"✅ Курс «{title}» добавлен!")
     await state.clear()
 
-# --- Удаление курса ---
-@admin_router.message(Command("delcourse"))
-async def delete_course(message: types.Message):
+# --- Просмотр пользователей ---
+@admin_router.message(Command("users"))
+@admin_router.message(F.text == "Пользователи")
+async def list_users(message: types.Message):
     if message.from_user.id != ADMIN_ID:
-        await message.answer("⛔ У вас нет прав для удаления курсов.")
+        await message.answer("⛔ Нет доступа.")
         return
-
-    args = message.text.split(maxsplit=1)
-    if len(args) < 2:
-        await message.answer("⚠️ Укажите название курса: /delcourse Python для начинающих")
-        return
-
-    title = args[1]
-    async with async_session() as session:
-        result = await session.execute(select(Course).where(Course.title == title))
-        course = result.scalar_one_or_none()
-
-        if not course:
-            await message.answer("⚠️ Курс не найден.")
-            return
-
-        await session.delete(course)
-        await session.commit()
-
-    await message.answer(f"🗑 Курс «{title}» удалён!")
-
-# --- Изменение цены курса ---
-@admin_router.message(Command("editcourse"))
-async def edit_course(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("⛔ У вас нет прав для изменения курсов.")
-        return
-
-    args = message.text.split(maxsplit=2)
-    if len(args) < 3:
-        await message.answer("⚠️ Использование: /editcourse <Название> <Новая цена>")
-        return
-
-    title = args[1]
-    new_price = int(args[2])
 
     async with async_session() as session:
-        result = await session.execute(select(Course).where(Course.title == title))
-        course = result.scalar_one_or_none()
+        result = await session.execute(select(User).options(selectinload(User.courses)))
+        users = result.scalars().all()
 
-        if not course:
-            await message.answer("⚠️ Курс не найден.")
-            return
+    if not users:
+        await message.answer("📭 Пользователей пока нет.")
+        return
 
-        course.price = new_price
-        await session.commit()
+    for user in users:
+        text = (
+            f"👤 <b>{user.name}</b>\n"
+            f"📱 {user.phone}\n"
+            f"🎂 {user.age} лет\n"
+        )
+        if user.courses:
+            text += "📚 Курсы: " + ", ".join([c.title for c in user.courses])
 
-    await message.answer(f"✏️ Цена курса «{title}» изменена на {new_price} руб.")
+        if user.photo:
+            await message.answer_photo(user.photo, caption=text, parse_mode="HTML")
+        else:
+            await message.answer(text, parse_mode="HTML")
+
+        if user.document:
+            await message.answer_document(user.document, caption="📄 Документ")

@@ -5,3 +5,4 @@ class Registration(StatesGroup):
     age = State()
     phone = State()
     photo = State()
+    document = State()

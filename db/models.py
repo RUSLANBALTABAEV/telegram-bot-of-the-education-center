@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Mapped, DeclarativeBase, mapped_column, relationship
 from sqlalchemy import BigInteger, String, Integer, ForeignKey, Table, Column, select
-from sqlalchemy.ext.asyncio import AsyncAttrs, create_async_engine, async_sessionmaker
-from config.bot_config import SQLALCHEMY_URL
+from sqlalchemy.ext.asyncio import AsyncAttrs
+from db.session import async_session, engine   # общий движок
 
 class Base(AsyncAttrs, DeclarativeBase):
     pass
@@ -21,10 +21,12 @@ class User(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True, nullable=True)
     name: Mapped[str] = mapped_column(String(100))
     age: Mapped[int] = mapped_column(Integer, nullable=True)
-    phone: Mapped[str] = mapped_column(String(20), nullable=True)
+    phone: Mapped[str] = mapped_column(String(20), nullable=True, unique=True)
     photo: Mapped[str] = mapped_column(String, nullable=True)
+    document: Mapped[str] = mapped_column(String, nullable=True)
 
     courses = relationship("Course", secondary=user_course, back_populates="users")
+    certificates = relationship("Certificate", back_populates="user")
 
 class Course(Base):
     __tablename__ = "courses"
@@ -36,14 +38,22 @@ class Course(Base):
 
     users = relationship("User", secondary=user_course, back_populates="courses")
 
-# Движок и сессия
-engine = create_async_engine(SQLALCHEMY_URL, echo=True)
-async_session = async_sessionmaker(engine, expire_on_commit=False)
+class Certificate(Base):
+    __tablename__ = "certificates"
 
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(255))
+    file_id: Mapped[str] = mapped_column(String)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+
+    user = relationship("User", back_populates="certificates")
+
+# --- Создание базы ---
 async def create_db(engine):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+# --- Сид курсов ---
 async def seed_courses(engine):
     async with async_session() as session:
         result = await session.execute(select(Course))

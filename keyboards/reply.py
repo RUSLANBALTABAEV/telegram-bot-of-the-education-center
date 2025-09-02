@@ -7,10 +7,12 @@ def main_menu(user_id: int):
     builder.row(KeyboardButton(text="Регистрация"))
     builder.row(KeyboardButton(text="Авторизация"))
     builder.row(KeyboardButton(text="Курсы"))
-    builder.row(KeyboardButton(text="Мои курсы"))
+    builder.row(KeyboardButton(text="Мои курсы"))         # 🔹 добавлено
+    builder.row(KeyboardButton(text="Мои сертификаты"))
 
-    if int(user_id) == int(ADMIN_ID):  # ✅ показываем админу
+    if int(user_id) == int(ADMIN_ID):
         builder.row(KeyboardButton(text="Добавить курс"))
+        builder.row(KeyboardButton(text="Пользователи"))
 
     builder.row(KeyboardButton(text="Выход"))
     return builder.as_markup(resize_keyboard=True)
