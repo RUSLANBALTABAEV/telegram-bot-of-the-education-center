@@ -1,12 +1,11 @@
 from sqlalchemy.orm import Mapped, DeclarativeBase, mapped_column, relationship
 from sqlalchemy import BigInteger, String, Integer, ForeignKey, Table, Column, select
 from sqlalchemy.ext.asyncio import AsyncAttrs
-from db.session import async_session, engine   # общий движок
+from db.session import async_session, engine
 
 class Base(AsyncAttrs, DeclarativeBase):
     pass
 
-# Таблица связки пользователей и курсов
 user_course = Table(
     "user_course",
     Base.metadata,
@@ -16,7 +15,6 @@ user_course = Table(
 
 class User(Base):
     __tablename__ = "users"
-
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True, nullable=True)
     name: Mapped[str] = mapped_column(String(100))
@@ -30,35 +28,28 @@ class User(Base):
 
 class Course(Base):
     __tablename__ = "courses"
-
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(100), unique=True)
     description: Mapped[str] = mapped_column(String(255), nullable=True)
     price: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-
     users = relationship("User", secondary=user_course, back_populates="courses")
 
 class Certificate(Base):
     __tablename__ = "certificates"
-
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255))
     file_id: Mapped[str] = mapped_column(String)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-
     user = relationship("User", back_populates="certificates")
 
-# --- Создание базы ---
 async def create_db(engine):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-# --- Сид курсов ---
 async def seed_courses(engine):
     async with async_session() as session:
         result = await session.execute(select(Course))
         courses = result.scalars().all()
-
         if not courses:
             default_courses = [
                 Course(title="Python для начинающих", description="Основы синтаксиса, ООП, работа с файлами", price=10000),

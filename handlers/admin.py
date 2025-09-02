@@ -1,53 +1,13 @@
 from aiogram import Router, F, types
 from aiogram.filters import Command
-from aiogram.fsm.context import FSMContext
-from sqlalchemy import select
+from sqlalchemy import select, delete, update
 from sqlalchemy.orm import selectinload
-from db.models import Course, User, async_session
-from fsm.courses import CourseFSM
+from db.models import User, Course, async_session
 from config.bot_config import ADMIN_ID
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 
 admin_router = Router()
 
-# --- Добавление курса ---
-@admin_router.message(Command("addcourse"))
-@admin_router.message(F.text == "Добавить курс")
-async def start_add_course(message: types.Message, state: FSMContext):
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("⛔ У вас нет прав для добавления курсов.")
-        return
-    await message.answer("Введите название курса:")
-    await state.set_state(CourseFSM.title)
-
-@admin_router.message(CourseFSM.title)
-async def process_course_title(message: types.Message, state: FSMContext):
-    await state.update_data(title=message.text)
-    await message.answer("Введите описание курса:")
-    await state.set_state(CourseFSM.description)
-
-@admin_router.message(CourseFSM.description)
-async def process_course_description(message: types.Message, state: FSMContext):
-    await state.update_data(description=message.text)
-    await message.answer("Введите цену курса (число):")
-    await state.set_state(CourseFSM.price)
-
-@admin_router.message(CourseFSM.price, F.text.regexp(r"^\d+$"))
-async def process_course_price(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    title = data["title"]
-    description = data["description"]
-    price = int(message.text)
-
-    async with async_session() as session:
-        new_course = Course(title=title, description=description, price=price)
-        session.add(new_course)
-        await session.commit()
-
-    await message.answer(f"✅ Курс «{title}» добавлен!")
-    await state.clear()
-
-# --- Просмотр пользователей ---
-@admin_router.message(Command("users"))
 @admin_router.message(F.text == "Пользователи")
 async def list_users(message: types.Message):
     if message.from_user.id != ADMIN_ID:
@@ -62,19 +22,51 @@ async def list_users(message: types.Message):
         await message.answer("📭 Пользователей пока нет.")
         return
 
-    for user in users:
-        text = (
-            f"👤 <b>{user.name}</b>\n"
-            f"📱 {user.phone}\n"
-            f"🎂 {user.age} лет\n"
+    text = "👥 Пользователи:\n"
+    for u in users:
+        text += f"• {u.name} ({u.phone})\n"
+    await message.answer(text)
+
+# --- Управление курсами ---
+@admin_router.message(F.text == "Управление курсами")
+async def manage_courses(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Нет доступа.")
+        return
+
+    async with async_session() as session:
+        result = await session.execute(select(Course))
+        courses = result.scalars().all()
+
+    if not courses:
+        await message.answer("📭 Курсов пока нет.")
+        return
+
+    for c in courses:
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(text="Редактировать", callback_data=f"edit_course:{c.id}"),
+                    InlineKeyboardButton(text="Удалить", callback_data=f"delete_course:{c.id}")
+                ]
+            ]
         )
-        if user.courses:
-            text += "📚 Курсы: " + ", ".join([c.title for c in user.courses])
+        await message.answer(f"📘 {c.title}\n💰 {c.price} руб.\n{c.description or 'Описание отсутствует'}",
+                             reply_markup=keyboard)
 
-        if user.photo:
-            await message.answer_photo(user.photo, caption=text, parse_mode="HTML")
+# --- Callback редактирования ---
+@admin_router.callback_query(F.data.startswith("delete_course:"))
+async def delete_course(callback: CallbackQuery):
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Нет доступа.", show_alert=True)
+        return
+
+    course_id = int(callback.data.split(":")[1])
+    async with async_session() as session:
+        course = await session.get(Course, course_id)
+        if course:
+            await session.delete(course)
+            await session.commit()
+            await callback.message.edit_text(f"🗑 Курс «{course.title}» удалён.")
         else:
-            await message.answer(text, parse_mode="HTML")
-
-        if user.document:
-            await message.answer_document(user.document, caption="📄 Документ")
+            await callback.answer("⚠️ Курс не найден.", show_alert=True)

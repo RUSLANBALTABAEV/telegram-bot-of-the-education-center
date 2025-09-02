@@ -4,4 +4,4 @@ config = dotenv_values('./config/.env')
 
 API_TOKEN = config['TOKEN']
 SQLALCHEMY_URL = config['SQLALCHEMY_URL']
-ADMIN_ID = int(config.get("ADMIN_ID", "0"))  # всегда int
+ADMIN_ID = int(config.get("ADMIN_ID", "0"))
