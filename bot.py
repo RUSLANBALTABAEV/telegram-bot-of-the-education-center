@@ -1,5 +1,6 @@
 import asyncio
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 from config.bot_config import API_TOKEN
 from handlers.registration import registration_router
 from handlers.auth import auth_router
@@ -10,7 +11,7 @@ from handlers.my_courses import my_courses_router
 from db.models import create_db, seed_courses
 from db.session import engine
 
-bot = Bot(API_TOKEN)
+bot = Bot(token=API_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
 
 async def main():

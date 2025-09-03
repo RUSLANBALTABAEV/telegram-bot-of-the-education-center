@@ -72,7 +72,6 @@ PHONE_RE = r"^\+?\d{10,15}$"
 async def process_phone(message: types.Message, state: FSMContext):
     phone = message.text.strip()
 
-    # проверка на уникальность телефона
     async with async_session() as session:
         result = await session.execute(select(User).where(User.phone == phone))
         phone_owner = result.scalar_one_or_none()
@@ -100,7 +99,7 @@ async def invalid_phone(message: types.Message):
 async def process_photo(message: types.Message, state: FSMContext):
     file_id = message.photo[-1].file_id
     await state.update_data(photo=file_id)
-    await message.answer("Теперь отправьте 📄 документ (PDF или картинку как файл).")
+    await message.answer("Теперь отправьте 📄 документ (PDF или изображение как файл).")
     await state.set_state(Registration.document)
 
 
@@ -109,29 +108,19 @@ async def invalid_photo(message: types.Message):
     await message.answer("⚠️ Отправьте именно фото, не текст и не стикер.")
 
 
-# --- Документ (PDF/JPG/PNG) ---
+# --- Документ (PDF/JPG/PNG как файл) ---
 @registration_router.message(
     Registration.document,
-    (F.content_type == ContentType.DOCUMENT) | (F.content_type == ContentType.PHOTO)
+    F.content_type == ContentType.DOCUMENT
 )
 async def process_document(message: types.Message, state: FSMContext):
-    file_id = None
-
-    if message.document:
-        mime = message.document.mime_type or ""
-        if mime.startswith("application/pdf") or mime.startswith("image/"):
-            file_id = message.document.file_id
-        else:
-            await message.answer("⚠️ Допустимы только PDF или изображения (JPG, JPEG, PNG).")
-            return
-    elif message.photo:
-        file_id = message.photo[-1].file_id
-
-    if not file_id:
-        await message.answer("⚠️ Отправьте корректный файл (PDF/JPG/PNG) или фото.")
+    mime = message.document.mime_type or ""
+    if mime.startswith("application/pdf") or mime.startswith("image/"):
+        await state.update_data(document=message.document.file_id)
+    else:
+        await message.answer("⚠️ Допустимы только PDF или изображения (JPG/JPEG/PNG).")
         return
 
-    await state.update_data(document=file_id)
     data = await state.get_data()
 
     new_user = User(
@@ -159,4 +148,4 @@ async def process_document(message: types.Message, state: FSMContext):
 
 @registration_router.message(Registration.document)
 async def invalid_document(message: types.Message):
-    await message.answer("⚠️ Пришлите PDF или изображение (JPG/JPEG/PNG).")
+    await message.answer("⚠️ Пришлите документ PDF или изображение как файл (JPG/JPEG/PNG).")

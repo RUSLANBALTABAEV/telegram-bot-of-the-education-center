@@ -1,11 +1,13 @@
 from sqlalchemy.orm import Mapped, DeclarativeBase, mapped_column, relationship
 from sqlalchemy import BigInteger, String, Integer, ForeignKey, Table, Column, select
 from sqlalchemy.ext.asyncio import AsyncAttrs
-from db.session import async_session, engine
+from db.session import async_session  # ✅ импорт из session
+from db.session import engine
 
 class Base(AsyncAttrs, DeclarativeBase):
     pass
 
+# --- таблица "многие-ко-многим"
 user_course = Table(
     "user_course",
     Base.metadata,
@@ -26,6 +28,7 @@ class User(Base):
     courses = relationship("Course", secondary=user_course, back_populates="users")
     certificates = relationship("Certificate", back_populates="user")
 
+
 class Course(Base):
     __tablename__ = "courses"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -33,6 +36,7 @@ class Course(Base):
     description: Mapped[str] = mapped_column(String(255), nullable=True)
     price: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     users = relationship("User", secondary=user_course, back_populates="courses")
+
 
 class Certificate(Base):
     __tablename__ = "certificates"
@@ -42,9 +46,11 @@ class Certificate(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     user = relationship("User", back_populates="certificates")
 
+
 async def create_db(engine):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
 
 async def seed_courses(engine):
     async with async_session() as session:

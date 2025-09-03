@@ -1,24 +1,23 @@
-# handlers/admin.py
-
 from aiogram import Router, F
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Message
+from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import IntegrityError
+
 from db.models import User, Course, async_session
 from config.bot_config import ADMIN_ID
 from fsm.courses import CourseFSM
-from aiogram.fsm.context import FSMContext
 
 admin_router = Router()
 
 
-# --- Главное меню админа ---
+# --- Кнопки ---
 def admin_main_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="Список пользователей", callback_data="show_users")],
             [InlineKeyboardButton(text="Управление курсами", callback_data="manage_courses")],
-            [InlineKeyboardButton(text="Добавить курс", callback_data="add_course")]
+            [InlineKeyboardButton(text="Добавить курс", callback_data="add_course")],
         ]
     )
 
@@ -29,6 +28,16 @@ def admin_back_keyboard():
     )
 
 
+def manage_courses_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="➕ Добавить курс", callback_data="add_course")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="admin_menu")],
+        ]
+    )
+
+
+# --- Вход в админ-меню ---
 @admin_router.message(F.text == "Управление курсами и пользователями")
 async def admin_main_menu(message: Message):
     if message.from_user.id != ADMIN_ID:
@@ -37,7 +46,18 @@ async def admin_main_menu(message: Message):
     await message.answer("👤 Меню администратора:", reply_markup=admin_main_keyboard())
 
 
-# --- Просмотр пользователей с фото и документами ---
+# --- Возврат в главное меню ---
+@admin_router.callback_query(F.data == "admin_menu")
+async def back_to_admin_menu(callback: CallbackQuery, state: FSMContext):
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Нет доступа.", show_alert=True)
+        return
+    await state.clear()
+    await callback.message.edit_text("👤 Меню администратора:", reply_markup=admin_main_keyboard())
+    await callback.answer()
+
+
+# --- Просмотр пользователей ---
 @admin_router.callback_query(F.data == "show_users")
 async def show_users(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
@@ -49,10 +69,13 @@ async def show_users(callback: CallbackQuery):
         users = result.scalars().all()
 
     if not users:
-        await callback.message.edit_text("📭 Пользователей пока нет.")
+        await callback.message.edit_text("📭 Пользователей пока нет.", reply_markup=admin_back_keyboard())
         await callback.answer()
         return
 
+    # Текущее сообщение заменяем заголовком…
+    await callback.message.edit_text("👥 Список пользователей:")
+    # …а записи выводим отдельными сообщениями, чтобы не упереться в лимит длины
     for user in users:
         text = f"👤 {user.name} ({user.phone or 'не указан'})"
         await callback.message.answer(text)
@@ -61,13 +84,19 @@ async def show_users(callback: CallbackQuery):
             await callback.message.answer_photo(user.photo, caption="Фото пользователя")
 
         if user.document:
-            await callback.message.answer_document(user.document, caption="Документ пользователя")
+            try:
+                await callback.message.answer_document(user.document, caption="Документ пользователя")
+            except Exception:
+                await callback.message.answer("⚠️ В поле документа сохранён неверный тип файла.")
 
-    await callback.message.answer("⬆️ Вернитесь в главное меню администратора:", reply_markup=admin_back_keyboard())
+    await callback.message.answer(
+        "⬆️ Чтобы вернуться в главное меню администратора, нажмите кнопку ниже:",
+        reply_markup=admin_back_keyboard(),
+    )
     await callback.answer()
 
 
-# --- Управление курсами ---
+# --- Управление курсами (список курсов) ---
 @admin_router.callback_query(F.data == "manage_courses")
 async def manage_courses(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
@@ -79,137 +108,99 @@ async def manage_courses(callback: CallbackQuery):
         courses = result.scalars().all()
 
     if not courses:
-        await callback.message.edit_text("📭 Курсов пока нет.")
-        await callback.answer()
-        return
+        text = "📚 Курсов пока нет."
+    else:
+        lines = ["📚 Доступные курсы:"]
+        for c in courses:
+            lines.append(f"• {c.title} — {c.price} руб.")
+        text = "\n".join(lines)
 
-    for c in courses:
-        keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(text="Редактировать", callback_data=f"edit_course:{c.id}"),
-                    InlineKeyboardButton(text="Удалить", callback_data=f"delete_course:{c.id}")
-                ]
-            ]
-        )
-        await callback.message.answer(
-            f"📘 {c.title}\n💰 {c.price} руб.\n{c.description or 'Описание отсутствует'}",
-            reply_markup=keyboard
-        )
-
-    await callback.message.answer("⬆️ Вернитесь в главное меню администратора:", reply_markup=admin_back_keyboard())
+    await callback.message.edit_text(
+        f"{text}\n\nВыберите действие:",
+        reply_markup=manage_courses_keyboard(),
+    )
     await callback.answer()
 
 
-# --- Кнопка "Назад" ---
-@admin_router.callback_query(F.data == "admin_menu")
-async def back_to_admin_menu(callback: CallbackQuery):
-    if callback.from_user.id != ADMIN_ID:
-        await callback.answer("⛔ Нет доступа", show_alert=True)
-        return
-
-    await callback.message.edit_text("👤 Меню администратора:", reply_markup=admin_main_keyboard())
-    await callback.answer()
-
-
-# --- Удаление курса ---
-@admin_router.callback_query(F.data.startswith("delete_course:"))
-async def delete_course(callback: CallbackQuery):
-    if callback.from_user.id != ADMIN_ID:
-        await callback.answer("⛔ Нет доступа", show_alert=True)
-        return
-
-    course_id = int(callback.data.split(":")[1])
-    async with async_session() as session:
-        course = await session.get(Course, course_id)
-        if course:
-            await session.delete(course)
-            await session.commit()
-            await callback.message.edit_text(f"🗑 Курс «{course.title}» удалён.")
-        else:
-            await callback.answer("⚠️ Курс не найден.", show_alert=True)
-
-
-# --- Добавление курса ---
+# --- Добавление курса: старт ---
 @admin_router.callback_query(F.data == "add_course")
 async def add_course_start(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id != ADMIN_ID:
-        await callback.answer("⛔ Нет доступа", show_alert=True)
+        await callback.answer("⛔ Нет доступа.", show_alert=True)
         return
-    await callback.message.answer("Введите название нового курса:")
+
     await state.set_state(CourseFSM.title)
-    await state.update_data(edit=False)
+    await callback.message.edit_text("🆕 Добавление курса\n\nВведите название курса:")
     await callback.answer()
 
 
-# --- Редактирование курса ---
-@admin_router.callback_query(F.data.startswith("edit_course:"))
-async def edit_course_start(callback: CallbackQuery, state: FSMContext):
-    if callback.from_user.id != ADMIN_ID:
-        await callback.answer("⛔ Нет доступа", show_alert=True)
-        return
-
-    course_id = int(callback.data.split(":")[1])
-    async with async_session() as session:
-        course = await session.get(Course, course_id)
-
-    if not course:
-        await callback.answer("⚠️ Курс не найден", show_alert=True)
-        return
-
-    await state.update_data(course_id=course.id, edit=True)
-    await callback.message.answer(f"Введите новое название курса (текущее: {course.title}):")
-    await state.set_state(CourseFSM.title)
-    await callback.answer()
-
-
-# --- FSM для добавления/редактирования ---
+# --- Добавление курса: название ---
 @admin_router.message(CourseFSM.title)
-async def process_course_title(message: Message, state: FSMContext):
-    await state.update_data(title=message.text.strip())
-    await message.answer("Введите описание курса (или '-' для пустого):")
-    await state.set_state(CourseFSM.description)
-
-
-@admin_router.message(CourseFSM.description)
-async def process_course_description(message: Message, state: FSMContext):
-    desc = message.text.strip()
-    if desc == "-":
-        desc = None
-    await state.update_data(description=desc)
-    await message.answer("Введите цену курса (числом):")
-    await state.set_state(CourseFSM.price)
-
-
-@admin_router.message(CourseFSM.price)
-async def process_course_price(message: Message, state: FSMContext):
-    try:
-        price = int(message.text)
-        if price < 0:
-            raise ValueError
-    except ValueError:
-        await message.answer("⚠️ Цена должна быть положительным числом. Попробуйте ещё раз:")
+async def add_course_title(message: Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Нет доступа.")
+        await state.clear()
         return
 
-    data = await state.get_data()
-    async with async_session() as session:
-        if data.get("edit"):
-            course = await session.get(Course, data["course_id"])
-            course.title = data["title"]
-            course.description = data["description"]
-            course.price = price
-            session.add(course)
-            await session.commit()
-            await message.answer(f"✅ Курс «{course.title}» успешно обновлён!")
-        else:
-            course = Course(
-                title=data["title"],
-                description=data["description"],
-                price=price
-            )
-            session.add(course)
-            await session.commit()
-            await message.answer(f"✅ Курс «{course.title}» успешно добавлен!")
+    title = message.text.strip()
+    if len(title) < 2:
+        await message.answer("⚠️ Название слишком короткое. Повторите:")
+        return
 
-    await message.answer("⬆️ Вернитесь в главное меню администратора:", reply_markup=admin_back_keyboard())
+    await state.update_data(title=title)
+    await state.set_state(CourseFSM.description)
+    await message.answer("Введите описание курса (до 255 символов):")
+
+
+# --- Добавление курса: описание ---
+@admin_router.message(CourseFSM.description)
+async def add_course_description(message: Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Нет доступа.")
+        await state.clear()
+        return
+
+    desc = (message.text or "").strip()
+    # Безопасно обрежем до длины поля в БД
+    if len(desc) > 255:
+        desc = desc[:255]
+
+    await state.update_data(description=desc)
+    await state.set_state(CourseFSM.price)
+    await message.answer("Введите цену курса (целое число):")
+
+
+# --- Добавление курса: цена (валидная)---
+@admin_router.message(CourseFSM.price, F.text.regexp(r"^\d+$"))
+async def add_course_price_ok(message: Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Нет доступа.")
+        await state.clear()
+        return
+
+    price = int(message.text)
+    data = await state.get_data()
+
+    async with async_session() as session:
+        course = Course(
+            title=data["title"],
+            description=data.get("description") or None,
+            price=price,
+        )
+        session.add(course)
+        try:
+            await session.commit()
+        except IntegrityError:
+            await session.rollback()
+            await message.answer("⚠️ Курс с таким названием уже существует. Операция отменена.")
+            await state.clear()
+            return
+
+    await message.answer(f"✅ Курс «{data['title']}» добавлен.\n💰 Цена: {price} руб.")
     await state.clear()
+
+
+# --- Добавление курса: цена (невалидная)---
+@admin_router.message(CourseFSM.price)
+async def add_course_price_invalid(message: Message):
+    await message.answer("⚠️ Цена должна быть целым числом. Повторите ввод:")

@@ -1,11 +1,13 @@
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, Message
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from db.models import User, Course, async_session
+from db.models import User, Course
+from db.session import async_session
 
 courses_router = Router()
+
 
 # --- Генерация списка курсов ---
 async def build_courses_message():
@@ -29,7 +31,7 @@ async def build_courses_message():
 # --- /courses ---
 @courses_router.message(Command("courses"))
 @courses_router.message(F.text == "Курсы")
-async def show_courses(message):
+async def show_courses(message: Message):
     text, keyboard = await build_courses_message()
     if not keyboard:
         await message.answer(text)
@@ -58,7 +60,6 @@ async def show_course_info(callback: CallbackQuery):
         f"💰 Цена: {course.price} руб."
     )
 
-    # если пользователь авторизован и уже записан — показать кнопку "Отписаться"
     if user and course in user.courses:
         action_button = InlineKeyboardButton(text="🚪 Отписаться", callback_data=f"unenroll:{course.id}")
     else:
@@ -70,7 +71,7 @@ async def show_course_info(callback: CallbackQuery):
             [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_courses")]
         ]
     )
-    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await callback.message.edit_text(text, reply_markup=keyboard)
 
 
 # --- Запись на курс ---
@@ -101,7 +102,7 @@ async def enroll_course(callback: CallbackQuery):
             await callback.message.edit_text(f"✅ Вы успешно записались на курс «{course.title}»!")
 
 
-# --- Отписка от курса ---
+# --- Отписка ---
 @courses_router.callback_query(F.data.startswith("unenroll:"))
 async def unenroll_course(callback: CallbackQuery):
     course_id = int(callback.data.split(":")[1])
@@ -129,7 +130,7 @@ async def unenroll_course(callback: CallbackQuery):
             await callback.message.edit_text(f"🚪 Вы отписались от курса «{course.title}».")
 
 
-# --- Назад к списку ---
+# --- Назад ---
 @courses_router.callback_query(F.data == "back_to_courses")
 async def back_to_courses(callback: CallbackQuery):
     text, keyboard = await build_courses_message()
