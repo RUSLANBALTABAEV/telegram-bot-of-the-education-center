@@ -1,4 +1,4 @@
-from aiogram import Router, F, types
+from aiogram import Router, F, types, Bot
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.enums import ContentType
@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from db.models import User, async_session
 from fsm.registration import Registration
+from config.bot_config import ADMIN_ID
 
 registration_router = Router()
 
@@ -113,7 +114,7 @@ async def invalid_photo(message: types.Message):
     Registration.document,
     F.content_type == ContentType.DOCUMENT
 )
-async def process_document(message: types.Message, state: FSMContext):
+async def process_document(message: types.Message, state: FSMContext, bot: Bot):  # ✅ добавили bot
     mime = message.document.mime_type or ""
     if mime.startswith("application/pdf") or mime.startswith("image/"):
         await state.update_data(document=message.document.file_id)
@@ -141,6 +142,25 @@ async def process_document(message: types.Message, state: FSMContext):
             await message.answer("⚠️ Этот номер уже есть в системе. Используйте /login.")
             await state.clear()
             return
+
+    # --- ✅ уведомление админу ---
+    notify_text = (
+        f"👤 Новый пользователь зарегистрирован!\n\n"
+        f"Имя: {new_user.name}\n"
+        f"Возраст: {new_user.age}\n"
+        f"Телефон: {new_user.phone}"
+    )
+
+    await bot.send_message(ADMIN_ID, notify_text)
+
+    if new_user.photo:
+        await bot.send_photo(ADMIN_ID, new_user.photo, caption="📷 Фото пользователя")
+
+    if new_user.document:
+        try:
+            await bot.send_document(ADMIN_ID, new_user.document, caption="📄 Документ пользователя")
+        except Exception:
+            await bot.send_message(ADMIN_ID, "⚠️ Документ не удалось отправить (неверный формат).")
 
     await message.answer("✅ Регистрация завершена! Добро пожаловать 🎉")
     await state.clear()
