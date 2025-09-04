@@ -1,19 +1,12 @@
 from sqlalchemy.orm import Mapped, DeclarativeBase, mapped_column, relationship
-from sqlalchemy import BigInteger, String, Integer, ForeignKey, Table, Column, select
+from sqlalchemy import BigInteger, String, Integer, ForeignKey, Date, Boolean, select
 from sqlalchemy.ext.asyncio import AsyncAttrs
-from db.session import async_session  # ✅ импорт из session
-from db.session import engine
+from db.session import async_session
+from datetime import date
 
 class Base(AsyncAttrs, DeclarativeBase):
     pass
 
-# --- таблица "многие-ко-многим"
-user_course = Table(
-    "user_course",
-    Base.metadata,
-    Column("user_id", ForeignKey("users.id"), primary_key=True),
-    Column("course_id", ForeignKey("courses.id"), primary_key=True),
-)
 
 class User(Base):
     __tablename__ = "users"
@@ -25,7 +18,7 @@ class User(Base):
     photo: Mapped[str] = mapped_column(String, nullable=True)
     document: Mapped[str] = mapped_column(String, nullable=True)
 
-    courses = relationship("Course", secondary=user_course, back_populates="users")
+    enrollments = relationship("Enrollment", back_populates="user")
     certificates = relationship("Certificate", back_populates="user")
 
 
@@ -35,7 +28,22 @@ class Course(Base):
     title: Mapped[str] = mapped_column(String(100), unique=True)
     description: Mapped[str] = mapped_column(String(255), nullable=True)
     price: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    users = relationship("User", secondary=user_course, back_populates="courses")
+
+    enrollments = relationship("Enrollment", back_populates="course")
+
+
+class Enrollment(Base):
+    __tablename__ = "enrollments"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"))
+
+    start_date: Mapped[date] = mapped_column(Date, nullable=True)
+    end_date: Mapped[date] = mapped_column(Date, nullable=True)
+    is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    user = relationship("User", back_populates="enrollments")
+    course = relationship("Course", back_populates="enrollments")
 
 
 class Certificate(Base):

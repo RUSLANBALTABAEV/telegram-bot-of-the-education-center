@@ -3,8 +3,9 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, Message
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from db.models import User, Course
+from db.models import User, Course, Enrollment
 from db.session import async_session
+from datetime import date, timedelta
 
 courses_router = Router()
 
@@ -44,11 +45,13 @@ async def show_courses(message: Message):
 async def show_course_info(callback: CallbackQuery):
     course_id = int(callback.data.split(":")[1])
     async with async_session() as session:
-        result = await session.execute(
-            select(User).options(selectinload(User.courses)).where(User.user_id == callback.from_user.id)
-        )
-        user = result.scalar_one_or_none()
         course = await session.get(Course, course_id)
+        result = await session.execute(
+            select(Enrollment).options(selectinload(Enrollment.course)).where(
+                Enrollment.user_id == callback.from_user.id, Enrollment.course_id == course_id
+            )
+        )
+        enrollment = result.scalar_one_or_none()
 
     if not course:
         await callback.answer("⚠️ Курс не найден.", show_alert=True)
@@ -60,7 +63,9 @@ async def show_course_info(callback: CallbackQuery):
         f"💰 Цена: {course.price} руб."
     )
 
-    if user and course in user.courses:
+    if enrollment:
+        status = "✅ Завершён" if enrollment.is_completed else f"📅 До {enrollment.end_date or 'не указано'}"
+        text += f"\n\nСтатус: {status}"
         action_button = InlineKeyboardButton(text="🚪 Отписаться", callback_data=f"unenroll:{course.id}")
     else:
         action_button = InlineKeyboardButton(text="✅ Записаться", callback_data=f"enroll:{course.id}")
@@ -71,7 +76,7 @@ async def show_course_info(callback: CallbackQuery):
             [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_courses")]
         ]
     )
-    await callback.message.edit_text(text, reply_markup=keyboard)
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 
 # --- Запись на курс ---
@@ -79,9 +84,7 @@ async def show_course_info(callback: CallbackQuery):
 async def enroll_course(callback: CallbackQuery):
     course_id = int(callback.data.split(":")[1])
     async with async_session() as session:
-        result = await session.execute(
-            select(User).options(selectinload(User.courses)).where(User.user_id == callback.from_user.id)
-        )
+        result = await session.execute(select(User).where(User.user_id == callback.from_user.id))
         user = result.scalar_one_or_none()
 
         if not user:
@@ -93,13 +96,23 @@ async def enroll_course(callback: CallbackQuery):
             await callback.answer("⚠️ Курс не найден.", show_alert=True)
             return
 
-        if course in user.courses:
+        existing = await session.execute(
+            select(Enrollment).where(Enrollment.user_id == user.id, Enrollment.course_id == course_id)
+        )
+        if existing.scalar_one_or_none():
             await callback.answer("⚠️ Вы уже записаны на этот курс.", show_alert=True)
-        else:
-            user.courses.append(course)
-            session.add(user)
-            await session.commit()
-            await callback.message.edit_text(f"✅ Вы успешно записались на курс «{course.title}»!")
+            return
+
+        enrollment = Enrollment(
+            user_id=user.id,
+            course_id=course.id,
+            start_date=date.today(),
+            end_date=date.today() + timedelta(days=30),  # например, длительность 30 дней
+            is_completed=False
+        )
+        session.add(enrollment)
+        await session.commit()
+        await callback.message.edit_text(f"✅ Вы успешно записались на курс «{course.title}»!")
 
 
 # --- Отписка ---
@@ -108,7 +121,7 @@ async def unenroll_course(callback: CallbackQuery):
     course_id = int(callback.data.split(":")[1])
     async with async_session() as session:
         result = await session.execute(
-            select(User).options(selectinload(User.courses)).where(User.user_id == callback.from_user.id)
+            select(User).where(User.user_id == callback.from_user.id)
         )
         user = result.scalar_one_or_none()
 
@@ -116,18 +129,18 @@ async def unenroll_course(callback: CallbackQuery):
             await callback.answer("⚠️ Сначала зарегистрируйтесь (/register) или войдите (/login).", show_alert=True)
             return
 
-        course = await session.get(Course, course_id)
-        if not course:
-            await callback.answer("⚠️ Курс не найден.", show_alert=True)
+        enrollment_q = await session.execute(
+            select(Enrollment).where(Enrollment.user_id == user.id, Enrollment.course_id == course_id)
+        )
+        enrollment = enrollment_q.scalar_one_or_none()
+
+        if not enrollment:
+            await callback.answer("⚠️ Вы не записаны на этот курс.", show_alert=True)
             return
 
-        if course not in user.courses:
-            await callback.answer("⚠️ Вы не записаны на этот курс.", show_alert=True)
-        else:
-            user.courses.remove(course)
-            session.add(user)
-            await session.commit()
-            await callback.message.edit_text(f"🚪 Вы отписались от курса «{course.title}».")
+        await session.delete(enrollment)
+        await session.commit()
+        await callback.message.edit_text("🚪 Вы отписались от курса.")
 
 
 # --- Назад ---
