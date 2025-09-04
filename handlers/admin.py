@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Message
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from db.models import User, Course
+from db.models import User, Course, Certificate
 from db.session import async_session
 from config.bot_config import ADMIN_ID
 from aiogram.fsm.context import FSMContext
@@ -26,13 +26,21 @@ class EditCourseFSM(StatesGroup):
     price = State()
 
 
+# --- FSM для выдачи сертификата ---
+class CertificateFSM(StatesGroup):
+    tg_user_id = State()
+    title = State()
+    file = State()
+
+
 # --- Главное меню админа ---
 def admin_main_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="👥 Список пользователей", callback_data="show_users")],
             [InlineKeyboardButton(text="📚 Управление курсами", callback_data="manage_courses")],
-            [InlineKeyboardButton(text="➕ Добавить курс", callback_data="add_course")]
+            [InlineKeyboardButton(text="➕ Добавить курс", callback_data="add_course")],
+            [InlineKeyboardButton(text="🏅 Выдать сертификат", callback_data="add_certificate")]
         ]
     )
 
@@ -80,7 +88,7 @@ async def show_users(callback: CallbackQuery):
         return
 
     for user in users:
-        text = f"👤 {user.name} ({user.phone or 'не указан'})"
+        text = f"👤 {user.name} ({user.phone or 'не указан'})\n🆔 Telegram ID: {user.user_id}"
         await callback.message.answer(text)
 
         if user.photo:
@@ -303,3 +311,58 @@ async def add_course_price(message: Message, state: FSMContext):
 @admin_router.message(AddCourseFSM.price)
 async def add_course_price_invalid(message: Message):
     await message.answer("⚠️ Цена должна быть числом. Попробуйте ещё раз:")
+
+
+# --- Выдача сертификата ---
+@admin_router.callback_query(F.data == "add_certificate")
+async def add_certificate_start(callback: CallbackQuery, state: FSMContext):
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Нет доступа.", show_alert=True)
+        return
+
+    await state.set_state(CertificateFSM.tg_user_id)
+    await callback.message.edit_text("Введите Telegram ID пользователя (его user_id):")
+    await callback.answer()
+
+
+@admin_router.message(CertificateFSM.tg_user_id, F.text.regexp(r"^\d+$"))
+async def add_certificate_user(message: Message, state: FSMContext):
+    tg_id = int(message.text.strip())
+
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.user_id == tg_id))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            await message.answer("⚠️ Пользователь не найден.")
+            await state.clear()
+            return
+
+    await state.update_data(user_db_id=user.id)
+    await state.set_state(CertificateFSM.title)
+    await message.answer(f"✅ Пользователь найден: {user.name}. Введите название сертификата:")
+
+
+@admin_router.message(CertificateFSM.title)
+async def add_certificate_title(message: Message, state: FSMContext):
+    await state.update_data(title=message.text.strip())
+    await state.set_state(CertificateFSM.file)
+    await message.answer("Отправьте файл сертификата (PDF или изображение):")
+
+
+@admin_router.message(CertificateFSM.file, F.document)
+async def add_certificate_file(message: Message, state: FSMContext):
+    file_id = message.document.file_id
+    data = await state.get_data()
+
+    async with async_session() as session:
+        new_cert = Certificate(
+            title=data["title"],
+            file_id=file_id,
+            user_id=data["user_db_id"]   # именно ID из БД!
+        )
+        session.add(new_cert)
+        await session.commit()
+
+    await message.answer(f"✅ Сертификат «{data['title']}» выдан пользователю ID {data['user_db_id']}.")
+    await state.clear()

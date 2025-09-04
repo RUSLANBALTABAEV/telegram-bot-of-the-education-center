@@ -17,7 +17,7 @@ async def start_auth(message: types.Message, state: FSMContext):
     if user:
         await message.answer("✅ Вы уже вошли в систему!")
     else:
-        await message.answer("Введите ваш номер телефона (в формате +79998887766):")
+        await message.answer("Введите ваш номер телефона (в формате +998900000102):")
         await state.set_state(Auth.phone)
 
 @auth_router.message(Auth.phone, F.text.regexp(r"^\+?\d{10,15}$"))
