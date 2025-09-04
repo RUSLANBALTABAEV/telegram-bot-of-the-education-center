@@ -18,6 +18,18 @@ async def start_registration(message: types.Message, state: FSMContext):
     print(f"👉 Запуск регистрации от {message.from_user.id} ({message.from_user.full_name})")
 
     async with async_session() as session:
+        # --- проверяем лимит пользователей ---
+        result_count = await session.execute(select(User))
+        total_users = len(result_count.scalars().all())
+
+        if total_users >= 100:
+            await message.answer(
+                "⚠️ Достигнут лимит регистрации (100 пользователей).\n"
+                "Новые пользователи не могут быть зарегистрированы."
+            )
+            return
+
+        # --- проверяем, не зарегистрирован ли уже этот user_id ---
         result = await session.execute(
             select(User).where(User.user_id == message.from_user.id)
         )
