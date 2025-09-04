@@ -40,7 +40,8 @@ def admin_main_keyboard():
             [InlineKeyboardButton(text="👥 Список пользователей", callback_data="show_users")],
             [InlineKeyboardButton(text="📚 Управление курсами", callback_data="manage_courses")],
             [InlineKeyboardButton(text="➕ Добавить курс", callback_data="add_course")],
-            [InlineKeyboardButton(text="🏅 Выдать сертификат", callback_data="add_certificate")]
+            [InlineKeyboardButton(text="🏅 Выдать сертификат", callback_data="add_certificate")],
+            [InlineKeyboardButton(text="🗑 Удалить всех пользователей", callback_data="delete_all_users")],  # ✅
         ]
     )
 
@@ -89,7 +90,12 @@ async def show_users(callback: CallbackQuery):
 
     for user in users:
         text = f"👤 {user.name} ({user.phone or 'не указан'})\n🆔 Telegram ID: {user.user_id}"
-        await callback.message.answer(text)
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🗑 Удалить этого пользователя", callback_data=f"delete_user:{user.id}")]
+            ]
+        )
+        await callback.message.answer(text, reply_markup=keyboard)
 
         if user.photo:
             await callback.message.answer_photo(user.photo, caption="Фото пользователя")
@@ -104,6 +110,51 @@ async def show_users(callback: CallbackQuery):
         "⬆️ Чтобы вернуться в главное меню администратора, нажмите кнопку ниже:",
         reply_markup=admin_back_keyboard()
     )
+    await callback.answer()
+
+
+# --- Удаление конкретного пользователя ---
+@admin_router.callback_query(F.data.startswith("delete_user:"))
+async def delete_user(callback: CallbackQuery):
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Нет доступа.", show_alert=True)
+        return
+
+    user_id = int(callback.data.split(":")[1])
+
+    async with async_session() as session:
+        user = await session.get(User, user_id)
+        if not user:
+            await callback.answer("⚠️ Пользователь не найден.", show_alert=True)
+            return
+
+        await session.delete(user)
+        await session.commit()
+
+    await callback.message.edit_text(f"🗑 Пользователь «{user.name}» удалён.")
+    await callback.answer()
+
+
+# --- Удаление всех пользователей ---
+@admin_router.callback_query(F.data == "delete_all_users")
+async def delete_all_users(callback: CallbackQuery):
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("⛔ Нет доступа.", show_alert=True)
+        return
+
+    async with async_session() as session:
+        result = await session.execute(select(User))
+        users = result.scalars().all()
+
+        if not users:
+            await callback.answer("⚠️ Пользователей нет.", show_alert=True)
+            return
+
+        for user in users:
+            await session.delete(user)
+        await session.commit()
+
+    await callback.message.edit_text("🗑 Все пользователи удалены.", reply_markup=admin_back_keyboard())
     await callback.answer()
 
 
