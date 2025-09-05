@@ -44,18 +44,30 @@ async def show_courses(message: Message):
 @courses_router.callback_query(F.data.startswith("course:"))
 async def show_course_info(callback: CallbackQuery):
     course_id = int(callback.data.split(":")[1])
+
     async with async_session() as session:
         course = await session.get(Course, course_id)
-        result = await session.execute(
-            select(Enrollment).options(selectinload(Enrollment.course)).where(
-                Enrollment.user_id == callback.from_user.id, Enrollment.course_id == course_id
-            )
-        )
-        enrollment = result.scalar_one_or_none()
+        if not course:
+            await callback.answer("⚠️ Курс не найден.", show_alert=True)
+            return
 
-    if not course:
-        await callback.answer("⚠️ Курс не найден.", show_alert=True)
-        return
+        # пытаемся найти пользователя по Telegram ID
+        result_user = await session.execute(
+            select(User).where(User.user_id == callback.from_user.id)
+        )
+        user = result_user.scalar_one_or_none()
+
+        enrollment = None
+        if user:
+            result = await session.execute(
+                select(Enrollment)
+                .options(selectinload(Enrollment.course))
+                .where(
+                    Enrollment.user_id == user.id,
+                    Enrollment.course_id == course_id
+                )
+            )
+            enrollment = result.scalar_one_or_none()
 
     text = (
         f"📘 <b>{course.title}</b>\n\n"

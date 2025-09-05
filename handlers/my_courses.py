@@ -2,9 +2,9 @@ from aiogram import Router, F, types
 from aiogram.filters import Command
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from db.models import User, Course, Certificate, Enrollment, async_session
+from db.models import User, Course, Certificate, Enrollment
+from db.session import async_session
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config.bot_config import ADMIN_ID
 
 my_courses_router = Router()
 
@@ -13,10 +13,20 @@ my_courses_router = Router()
 @my_courses_router.message(F.text == "Мои курсы")
 async def show_my_courses(message: types.Message):
     async with async_session() as session:
+        # находим пользователя по Telegram ID
+        result_user = await session.execute(
+            select(User).where(User.user_id == message.from_user.id)
+        )
+        user = result_user.scalar_one_or_none()
+
+        if not user:
+            await message.answer("⚠️ Вы не зарегистрированы. Используйте /register.")
+            return
+
         result = await session.execute(
-            select(Enrollment).options(selectinload(Enrollment.course)).where(
-                Enrollment.user_id == message.from_user.id
-            )
+            select(Enrollment)
+            .options(selectinload(Enrollment.course))
+            .where(Enrollment.user_id == user.id)
         )
         enrollments = result.scalars().all()
 

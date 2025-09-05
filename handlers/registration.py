@@ -4,7 +4,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.enums import ContentType
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from db.models import User, async_session
+from db.models import User
+from db.session import async_session
 from fsm.registration import Registration
 from config.bot_config import ADMIN_ID
 

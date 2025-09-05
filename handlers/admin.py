@@ -89,7 +89,7 @@ async def show_users(callback: CallbackQuery):
         return
 
     for user in users:
-        text = f"👤 {user.name} ({user.phone or 'не указан'})\n🆔 Telegram ID: {user.user_id}"
+        text = f"👤 {user.name} ({user.phone or 'не указан'})\n🆔 Telegram ID: {user.user_id}\n🗄 DB ID: {user.id}"
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="🗑 Удалить этого пользователя", callback_data=f"delete_user:{user.id}")]
@@ -415,5 +415,5 @@ async def add_certificate_file(message: Message, state: FSMContext):
         session.add(new_cert)
         await session.commit()
 
-    await message.answer(f"✅ Сертификат «{data['title']}» выдан пользователю ID {data['user_db_id']}.")
+    await message.answer(f"✅ Сертификат «{data['title']}» выдан пользователю (DB ID {data['user_db_id']}).")
     await state.clear()

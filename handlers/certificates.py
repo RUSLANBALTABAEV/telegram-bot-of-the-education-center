@@ -18,23 +18,22 @@ async def show_all_certificates(message: types.Message):
         result = await session.execute(select(Certificate))
         certificates = result.scalars().all()
 
-    if not certificates:
-        await message.answer("📭 Сертификатов пока нет.")
-        await message.answer("⬆️ Главное меню", reply_markup=main_menu(message.from_user.id))
-        return
+        if not certificates:
+            await message.answer("📭 Сертификатов пока нет.")
+            await message.answer("⬆️ Главное меню", reply_markup=main_menu(message.from_user.id))
+            return
 
-    for cert in certificates:
-        async with async_session() as session:
+        # В одном сеансе подтянем имена пользователей
+        for cert in certificates:
             user = await session.get(User, cert.user_id)
+            text = f"🏅 {cert.title}\n👤 Пользователь: {user.name if user else cert.user_id}"
+            await message.answer(text)
 
-        text = f"🏅 {cert.title}\n👤 Пользователь: {user.name if user else cert.user_id}"
-        await message.answer(text)
-
-        if cert.file_id:
-            try:
-                await message.answer_document(cert.file_id, caption="📄 Файл сертификата")
-            except Exception:
-                await message.answer("⚠️ Ошибка при отправке файла сертификата.")
+            if cert.file_id:
+                try:
+                    await message.answer_document(cert.file_id, caption="📄 Файл сертификата")
+                except Exception:
+                    await message.answer("⚠️ Ошибка при отправке файла сертификата.")
 
     await message.answer("⬆️ Главное меню", reply_markup=main_menu(message.from_user.id))
 
@@ -43,8 +42,20 @@ async def show_all_certificates(message: types.Message):
 @certificates_router.message(F.text == "Мои сертификаты")
 async def show_my_certificates(message: types.Message):
     async with async_session() as session:
+        # 1) Находим пользователя по Telegram ID
+        result_user = await session.execute(
+            select(User).where(User.user_id == message.from_user.id)
+        )
+        user = result_user.scalar_one_or_none()
+
+        if not user:
+            await message.answer("⚠️ Вы не зарегистрированы. Используйте /register.")
+            await message.answer("⬆️ Главное меню", reply_markup=main_menu(message.from_user.id))
+            return
+
+        # 2) Ищем сертификаты по внутреннему user.id
         result = await session.execute(
-            select(Certificate).where(Certificate.user_id == message.from_user.id)
+            select(Certificate).where(Certificate.user_id == user.id)
         )
         certificates = result.scalars().all()
 

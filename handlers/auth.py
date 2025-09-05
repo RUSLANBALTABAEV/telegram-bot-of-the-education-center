@@ -2,7 +2,8 @@ from aiogram import Router, F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
-from db.models import User, async_session
+from db.models import User
+from db.session import async_session
 from fsm.auth import Auth
 
 auth_router = Router()

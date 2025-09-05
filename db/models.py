@@ -11,15 +11,27 @@ class Base(AsyncAttrs, DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    # Telegram ID
     user_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True, nullable=True)
+
     name: Mapped[str] = mapped_column(String(100))
     age: Mapped[int] = mapped_column(Integer, nullable=True)
     phone: Mapped[str] = mapped_column(String(20), nullable=True, unique=True)
     photo: Mapped[str] = mapped_column(String, nullable=True)
     document: Mapped[str] = mapped_column(String, nullable=True)
 
-    enrollments = relationship("Enrollment", back_populates="user")
-    certificates = relationship("Certificate", back_populates="user")
+    enrollments = relationship(
+        "Enrollment",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    certificates = relationship(
+        "Certificate",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    # Удобное "view-only" свойство, чтобы быстро смотреть курсы пользователя
+    courses = relationship("Course", secondary="enrollments", viewonly=True)
 
 
 class Course(Base):
@@ -29,14 +41,19 @@ class Course(Base):
     description: Mapped[str] = mapped_column(String(255), nullable=True)
     price: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    enrollments = relationship("Enrollment", back_populates="course")
+    enrollments = relationship(
+        "Enrollment",
+        back_populates="course",
+        cascade="all, delete-orphan"
+    )
 
 
 class Enrollment(Base):
     __tablename__ = "enrollments"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"))
+    # FK — всегда на внутренний PK пользователя
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"))
 
     start_date: Mapped[date] = mapped_column(Date, nullable=True)
     end_date: Mapped[date] = mapped_column(Date, nullable=True)
@@ -51,7 +68,8 @@ class Certificate(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255))
     file_id: Mapped[str] = mapped_column(String)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    # FK — на внутренний PK пользователя
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     user = relationship("User", back_populates="certificates")
 
 
