@@ -1,4 +1,5 @@
 import asyncio
+from loader import bot, dp   # ✅ используем loader
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from config.bot_config import API_TOKEN
@@ -9,6 +10,7 @@ from handlers.courses import courses_router
 from handlers.admin import admin_router
 from handlers.my_courses import my_courses_router
 from handlers.certificates import certificates_router   # ✅ новый роутер
+from notifier import setup_scheduler
 from db.models import create_db, seed_courses
 from db.session import engine
 
@@ -26,6 +28,9 @@ async def main():
     dp.include_router(my_courses_router)
     dp.include_router(admin_router)
     dp.include_router(certificates_router)   # ✅ подключен
+
+    # запускаем уведомления
+    setup_scheduler() 
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
