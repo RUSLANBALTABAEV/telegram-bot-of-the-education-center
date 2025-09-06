@@ -33,7 +33,7 @@ async def show_all_certificates(message: types.Message):
                 except Exception:
                     await message.answer("⚠️ Ошибка при отправке файла сертификата.")
 
-    await message.answer("🔙 Главное меню", reply_markup=main_menu(message.from_user.id))
+    
 
 
 @certificates_router.message(F.text == "Мои сертификаты")
@@ -69,4 +69,4 @@ async def show_my_certificates(message: types.Message):
             except Exception:
                 await message.answer("⚠️ Ошибка при отправке сертификата.")
 
-    await message.answer("🔙 Главное меню", reply_markup=main_menu(message.from_user.id))
+    
