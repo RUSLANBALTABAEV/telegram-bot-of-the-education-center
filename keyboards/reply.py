@@ -12,7 +12,7 @@ def main_menu(user_id: int):
         builder.row(KeyboardButton(text="Сертификаты"))  
         builder.row(KeyboardButton(text="Управление курсами и пользователями"))
     else:
-        builder.row(KeyboardButton(text="Мои курсы"))       # ✅ только у пользователя
+        builder.row(KeyboardButton(text="Мои курсы"))      
         builder.row(KeyboardButton(text="Мои сертификаты"))
 
     builder.row(KeyboardButton(text="Выход"))

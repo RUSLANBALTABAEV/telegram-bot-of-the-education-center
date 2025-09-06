@@ -51,7 +51,7 @@ class Course(Base):
 class Enrollment(Base):
     __tablename__ = "enrollments"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    # FK — всегда на внутренний PK пользователя
+    
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"))
 
@@ -68,7 +68,7 @@ class Certificate(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255))
     file_id: Mapped[str] = mapped_column(String)
-    # FK — на внутренний PK пользователя
+    
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     user = relationship("User", back_populates="certificates")
 

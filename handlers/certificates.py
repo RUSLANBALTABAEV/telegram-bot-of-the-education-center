@@ -7,7 +7,7 @@ from keyboards.reply import main_menu
 
 certificates_router = Router()
 
-# --- Просмотр всех сертификатов (только админ) ---
+
 @certificates_router.message(F.text == "Сертификаты")
 async def show_all_certificates(message: types.Message):
     if message.from_user.id != ADMIN_ID:
@@ -23,7 +23,7 @@ async def show_all_certificates(message: types.Message):
             await message.answer("⬆️ Главное меню", reply_markup=main_menu(message.from_user.id))
             return
 
-        # В одном сеансе подтянем имена пользователей
+        
         for cert in certificates:
             user = await session.get(User, cert.user_id)
             text = f"🏅 {cert.title}\n👤 Пользователь: {user.name if user else cert.user_id}"
@@ -38,11 +38,11 @@ async def show_all_certificates(message: types.Message):
     await message.answer("⬆️ Главное меню", reply_markup=main_menu(message.from_user.id))
 
 
-# --- Просмотр моих сертификатов (пользователь) ---
+
 @certificates_router.message(F.text == "Мои сертификаты")
 async def show_my_certificates(message: types.Message):
     async with async_session() as session:
-        # 1) Находим пользователя по Telegram ID
+        
         result_user = await session.execute(
             select(User).where(User.user_id == message.from_user.id)
         )
@@ -53,7 +53,7 @@ async def show_my_certificates(message: types.Message):
             await message.answer("⬆️ Главное меню", reply_markup=main_menu(message.from_user.id))
             return
 
-        # 2) Ищем сертификаты по внутреннему user.id
+        
         result = await session.execute(
             select(Certificate).where(Certificate.user_id == user.id)
         )

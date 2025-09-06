@@ -1,5 +1,5 @@
 import asyncio
-from loader import bot, dp   # ✅ используем loader
+from loader import bot, dp 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from config.bot_config import API_TOKEN
@@ -9,7 +9,7 @@ from handlers.start import start_router
 from handlers.courses import courses_router
 from handlers.admin import admin_router
 from handlers.my_courses import my_courses_router
-from handlers.certificates import certificates_router   # ✅ новый роутер
+from handlers.certificates import certificates_router
 from notifier import setup_scheduler
 from db.models import create_db, seed_courses
 from db.session import engine
@@ -27,7 +27,7 @@ async def main():
     dp.include_router(courses_router)
     dp.include_router(my_courses_router)
     dp.include_router(admin_router)
-    dp.include_router(certificates_router)   # ✅ подключен
+    dp.include_router(certificates_router) 
 
     # запускаем уведомления
     setup_scheduler() 

@@ -10,7 +10,7 @@ from datetime import date, timedelta
 courses_router = Router()
 
 
-# --- Генерация списка курсов ---
+
 async def build_courses_message():
     async with async_session() as session:
         result = await session.execute(select(Course))
@@ -29,7 +29,7 @@ async def build_courses_message():
     return text, keyboard
 
 
-# --- /courses ---
+
 @courses_router.message(Command("courses"))
 @courses_router.message(F.text == "Курсы")
 async def show_courses(message: Message):
@@ -40,7 +40,7 @@ async def show_courses(message: Message):
         await message.answer(text, reply_markup=keyboard)
 
 
-# --- Информация о курсе ---
+
 @courses_router.callback_query(F.data.startswith("course:"))
 async def show_course_info(callback: CallbackQuery):
     course_id = int(callback.data.split(":")[1])
@@ -51,7 +51,7 @@ async def show_course_info(callback: CallbackQuery):
             await callback.answer("⚠️ Курс не найден.", show_alert=True)
             return
 
-        # пытаемся найти пользователя по Telegram ID
+        
         result_user = await session.execute(
             select(User).where(User.user_id == callback.from_user.id)
         )
@@ -91,7 +91,7 @@ async def show_course_info(callback: CallbackQuery):
     await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 
-# --- Запись на курс ---
+
 @courses_router.callback_query(F.data.startswith("enroll:"))
 async def enroll_course(callback: CallbackQuery):
     course_id = int(callback.data.split(":")[1])
@@ -119,7 +119,7 @@ async def enroll_course(callback: CallbackQuery):
             user_id=user.id,
             course_id=course.id,
             start_date=date.today(),
-            end_date=date.today() + timedelta(days=30),  # например, длительность 30 дней
+            end_date=date.today() + timedelta(days=30),
             is_completed=False
         )
         session.add(enrollment)
@@ -127,7 +127,7 @@ async def enroll_course(callback: CallbackQuery):
         await callback.message.edit_text(f"✅ Вы успешно записались на курс «{course.title}»!")
 
 
-# --- Отписка ---
+
 @courses_router.callback_query(F.data.startswith("unenroll:"))
 async def unenroll_course(callback: CallbackQuery):
     course_id = int(callback.data.split(":")[1])
@@ -155,7 +155,7 @@ async def unenroll_course(callback: CallbackQuery):
         await callback.message.edit_text("🚪 Вы отписались от курса.")
 
 
-# --- Назад ---
+
 @courses_router.callback_query(F.data == "back_to_courses")
 async def back_to_courses(callback: CallbackQuery):
     text, keyboard = await build_courses_message()

@@ -11,14 +11,14 @@ from aiogram.fsm.state import StatesGroup, State
 admin_router = Router()
 
 
-# --- FSM для добавления курса ---
+
 class AddCourseFSM(StatesGroup):
     title = State()
     description = State()
     price = State()
 
 
-# --- FSM для редактирования курса ---
+
 class EditCourseFSM(StatesGroup):
     course_id = State()
     title = State()
@@ -26,14 +26,14 @@ class EditCourseFSM(StatesGroup):
     price = State()
 
 
-# --- FSM для выдачи сертификата ---
+
 class CertificateFSM(StatesGroup):
     tg_user_id = State()
     title = State()
     file = State()
 
 
-# --- Главное меню админа ---
+
 def admin_main_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -52,7 +52,7 @@ def admin_back_keyboard():
     )
 
 
-# --- Открытие главного меню ---
+
 @admin_router.message(F.text == "Управление курсами и пользователями")
 async def admin_main_menu(message: Message):
     if message.from_user.id != ADMIN_ID:
@@ -61,7 +61,7 @@ async def admin_main_menu(message: Message):
     await message.answer("👤 Главное меню администратора:", reply_markup=admin_main_keyboard())
 
 
-# --- Возврат в главное меню ---
+
 @admin_router.callback_query(F.data == "admin_menu")
 async def back_to_admin_menu(callback: CallbackQuery, state: FSMContext):
     await state.clear()
@@ -72,7 +72,7 @@ async def back_to_admin_menu(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-# --- Просмотр пользователей ---
+
 @admin_router.callback_query(F.data == "show_users")
 async def show_users(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
@@ -113,7 +113,7 @@ async def show_users(callback: CallbackQuery):
     await callback.answer()
 
 
-# --- Удаление конкретного пользователя ---
+
 @admin_router.callback_query(F.data.startswith("delete_user:"))
 async def delete_user(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
@@ -135,7 +135,7 @@ async def delete_user(callback: CallbackQuery):
     await callback.answer()
 
 
-# --- Удаление всех пользователей ---
+
 @admin_router.callback_query(F.data == "delete_all_users")
 async def delete_all_users(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
@@ -158,7 +158,7 @@ async def delete_all_users(callback: CallbackQuery):
     await callback.answer()
 
 
-# --- Управление курсами ---
+
 @admin_router.callback_query(F.data == "manage_courses")
 async def manage_courses(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
@@ -188,7 +188,7 @@ async def manage_courses(callback: CallbackQuery):
     await callback.answer()
 
 
-# --- Меню конкретного курса ---
+
 @admin_router.callback_query(F.data.startswith("course_admin:"))
 async def course_admin_menu(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
@@ -223,7 +223,7 @@ async def course_admin_menu(callback: CallbackQuery):
     await callback.answer()
 
 
-# --- Удаление курса ---
+
 @admin_router.callback_query(F.data.startswith("delete_course:"))
 async def delete_course(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
@@ -244,7 +244,7 @@ async def delete_course(callback: CallbackQuery):
     await callback.answer()
 
 
-# --- Редактирование курса ---
+
 @admin_router.callback_query(F.data.startswith("edit_course:"))
 async def edit_course_start(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id != ADMIN_ID:
@@ -306,7 +306,7 @@ async def edit_course_price_invalid(message: Message):
     await message.answer("⚠️ Цена должна быть числом. Попробуйте ещё раз:")
 
 
-# --- Добавление курса ---
+
 @admin_router.callback_query(F.data == "add_course")
 async def add_course_start(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id != ADMIN_ID:
@@ -364,7 +364,7 @@ async def add_course_price_invalid(message: Message):
     await message.answer("⚠️ Цена должна быть числом. Попробуйте ещё раз:")
 
 
-# --- Выдача сертификата ---
+
 @admin_router.callback_query(F.data == "add_certificate")
 async def add_certificate_start(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id != ADMIN_ID:
@@ -410,7 +410,7 @@ async def add_certificate_file(message: Message, state: FSMContext):
         new_cert = Certificate(
             title=data["title"],
             file_id=file_id,
-            user_id=data["user_db_id"]   # именно ID из БД!
+            user_id=data["user_db_id"]
         )
         session.add(new_cert)
         await session.commit()

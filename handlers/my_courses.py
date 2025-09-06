@@ -8,12 +8,12 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 my_courses_router = Router()
 
-# --- Мои курсы ---
+
 @my_courses_router.message(Command("mycourses"))
 @my_courses_router.message(F.text == "Мои курсы")
 async def show_my_courses(message: types.Message):
     async with async_session() as session:
-        # находим пользователя по Telegram ID
+        
         result_user = await session.execute(
             select(User).where(User.user_id == message.from_user.id)
         )
