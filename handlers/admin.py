@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Message
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from db.models import User, Course, Certificate
+from db.models import User, Course, Certificate, Enrollment
 from db.session import async_session
 from config.bot_config import ADMIN_ID
 from aiogram.fsm.context import FSMContext
@@ -91,15 +91,25 @@ async def show_users(callback: CallbackQuery):
         return
 
     for user in users:
-        text = f"👤 {user.name or 'Без имени'}\n🆔 Telegram ID: {user.user_id}\n🗄 DB ID: {user.id}"
+        text = f"👤 {user.name or 'Без имени'}\n🆔 Telegram ID: {user.user_id}\n🗄 DB ID: {user.id}\n📱 {user.phone or '—'}"
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="🗑 Удалить", callback_data=f"delete_user:{user.id}")]
             ]
         )
-        await callback.message.answer(text, reply_markup=keyboard)
 
-    await callback.message.answer(reply_markup=admin_back_keyboard())
+        # если есть фото — отправляем фото с подписью, иначе просто текст
+        try:
+            if user.photo:
+                await callback.message.answer_photo(photo=user.photo, caption=text, reply_markup=keyboard)
+            else:
+                await callback.message.answer(text, reply_markup=keyboard)
+        except Exception:
+            # на всякий — когда file_id испорчен или недоступен
+            await callback.message.answer(text + "\n\n⚠️ Не удалось отправить фото (file_id).", reply_markup=keyboard)
+
+    # кнопка назад
+    await callback.message.answer("🔙 Главное меню администратора", reply_markup=admin_back_keyboard())
     await callback.answer()
 
 
@@ -120,7 +130,7 @@ async def delete_user(callback: CallbackQuery):
         await session.delete(user)
         await session.commit()
 
-    await callback.message.edit_text(f"🗑 Пользователь «{user.name}» удалён.")
+    await callback.message.edit_text(f"🗑 Пользователь «{user.name}» удалён.", reply_markup=admin_back_keyboard())
     await callback.answer()
 
 
@@ -250,7 +260,7 @@ async def add_course_description(message: Message, state: FSMContext):
 async def add_course_price(message: Message, state: FSMContext):
     await state.update_data(price=int(message.text.strip()))
     await state.set_state(AddCourseFSM.start_date)
-    await message.answer("Введите дату начала курса (ДД.ММ.ГГГГ):")
+    await message.answer("Введите дату начала курса (ДД.MM.ГГГГ):")
 
 
 @admin_router.message(AddCourseFSM.start_date)
@@ -262,7 +272,7 @@ async def add_course_start_date(message: Message, state: FSMContext):
         return
     await state.update_data(start_date=start_date)
     await state.set_state(AddCourseFSM.end_date)
-    await message.answer("Введите дату окончания курса (ДД.ММ.ГГГГ):")
+    await message.answer("Введите дату окончания курса (ДД.MM.ГГГГ):")
 
 
 @admin_router.message(AddCourseFSM.end_date)
@@ -327,7 +337,7 @@ async def edit_course_description(message: Message, state: FSMContext):
 async def edit_course_price(message: Message, state: FSMContext):
     await state.update_data(price=int(message.text.strip()))
     await state.set_state(EditCourseFSM.start_date)
-    await message.answer("Введите новую дату начала курса (ДД.ММ.ГГГГ):")
+    await message.answer("Введите новую дату начала курса (ДД.MM.ГГГГ):")
 
 
 @admin_router.message(EditCourseFSM.start_date)
@@ -339,7 +349,7 @@ async def edit_course_start_date(message: Message, state: FSMContext):
         return
     await state.update_data(start_date=start_date)
     await state.set_state(EditCourseFSM.end_date)
-    await message.answer("Введите новую дату окончания курса (ДД.ММ.ГГГГ):")
+    await message.answer("Введите новую дату окончания курса (ДД.MM.ГГГГ):")
 
 
 @admin_router.message(EditCourseFSM.end_date)
@@ -424,5 +434,5 @@ async def add_certificate_file(message: Message, state: FSMContext):
         session.add(new_cert)
         await session.commit()
 
-    await message.answer(f"✅ Сертификат «{data['title']}» выдан.")
+    await message.answer(f"✅ Сертификат «{data['title']}» выдан.", reply_markup=admin_back_keyboard())
     await state.clear()

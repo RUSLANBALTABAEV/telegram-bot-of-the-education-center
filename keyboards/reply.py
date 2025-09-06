@@ -8,12 +8,17 @@ def main_menu(user_id: int):
     builder.row(KeyboardButton(text="Авторизация"))
     builder.row(KeyboardButton(text="Курсы"))
 
-    if int(user_id) == int(ADMIN_ID):
-        builder.row(KeyboardButton(text="Сертификаты"))  
+    try:
+        is_admin = int(user_id) == int(ADMIN_ID)
+    except Exception:
+        is_admin = False
+
+    if is_admin:
+        builder.row(KeyboardButton(text="Сертификаты"))
         builder.row(KeyboardButton(text="Управление курсами и пользователями"))
     else:
-        builder.row(KeyboardButton(text="Мои курсы"))      
+        builder.row(KeyboardButton(text="Мои курсы"))
         builder.row(KeyboardButton(text="Мои сертификаты"))
 
     builder.row(KeyboardButton(text="Выход"))
-    return builder.as_markup(resize_keyboard=True)
+    return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)

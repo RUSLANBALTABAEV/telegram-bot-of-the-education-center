@@ -8,6 +8,7 @@ from db.models import User
 from db.session import async_session
 from fsm.registration import Registration
 from config.bot_config import ADMIN_ID
+from keyboards.reply import main_menu
 
 registration_router = Router()
 
@@ -156,26 +157,28 @@ async def process_document(message: types.Message, state: FSMContext, bot: Bot):
             await state.clear()
             return
 
-    
+    # уведомление админа
     notify_text = (
         f"👤 Новый пользователь зарегистрирован!\n\n"
         f"Имя: {new_user.name}\n"
         f"Возраст: {new_user.age}\n"
-        f"Телефон: {new_user.phone}"
+        f"Телефон: {new_user.phone}\n"
+        f"DB id: {new_user.id}\n"
+        f"TG id: {new_user.user_id}"
     )
 
-    await bot.send_message(ADMIN_ID, notify_text)
-
-    if new_user.photo:
-        await bot.send_photo(ADMIN_ID, new_user.photo, caption="📷 Фото пользователя")
-
-    if new_user.document:
-        try:
+    # отправляем текст и файлы администратору
+    try:
+        await bot.send_message(ADMIN_ID, notify_text)
+        if new_user.photo:
+            await bot.send_photo(ADMIN_ID, new_user.photo, caption="📷 Фото пользователя")
+        if new_user.document:
             await bot.send_document(ADMIN_ID, new_user.document, caption="📄 Документ пользователя")
-        except Exception:
-            await bot.send_message(ADMIN_ID, "⚠️ Документ не удалось отправить (неверный формат).")
+    except Exception:
+        # если отправка админу не удалась — просто логируем (в консоль) и продолжаем
+        print("⚠️ Не удалось уведомить администратора (отправка файлов/сообщения).")
 
-    await message.answer("✅ Регистрация завершена! Добро пожаловать 🎉")
+    await message.answer("✅ Регистрация завершена! Добро пожаловать 🎉", reply_markup=main_menu(message.from_user.id))
     await state.clear()
 
 
