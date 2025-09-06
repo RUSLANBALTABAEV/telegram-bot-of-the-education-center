@@ -71,7 +71,7 @@ async def process_age(message: types.Message, state: FSMContext):
         await message.answer("⚠️ Укажите реальный возраст (1–120). Попробуйте ещё раз.")
         return
     await state.update_data(age=age)
-    await message.answer("Введите ваш номер телефона (в формате +79998887766):")
+    await message.answer("Введите ваш номер телефона (в формате +99890000xxxx):")
     await state.set_state(Registration.phone)
 
 
@@ -106,7 +106,7 @@ async def process_phone(message: types.Message, state: FSMContext):
 
 @registration_router.message(Registration.phone)
 async def invalid_phone(message: types.Message):
-    await message.answer("⚠️ Неверный формат номера. Пример: +79998887766")
+    await message.answer("⚠️ Неверный формат номера. Пример: +99890000xxxx")
 
 
 
