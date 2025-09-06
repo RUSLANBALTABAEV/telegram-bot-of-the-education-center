@@ -1,25 +1,26 @@
-# notifier.py
 from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import select
 from db.session import async_session
 from db.models import Enrollment, User, Course
-from loader import bot   # ✅ берём bot отсюда
+from loader import bot   # ✅ импортируем bot отсюда
 
-scheduler = AsyncIOScheduler(timezone="Asia/Tashkent")  # часовой пояс можно поменять
+# Планировщик с нужным часовым поясом
+scheduler = AsyncIOScheduler(timezone="Asia/Tashkent")
 
-# уведомление о старте курса
+# Уведомление о старте курсов
 async def notify_start_course():
-    today = datetime.today().date()
+    today = datetime.now(scheduler.timezone).date()
     async with async_session() as session:
         result = await session.execute(
-            select(Enrollment).where(Enrollment.start_date == today)
+            select(Enrollment, Course, User)
+            .join(Course, Enrollment.course_id == Course.id)
+            .join(User, Enrollment.user_id == User.id)
+            .where(Enrollment.start_date == today)
         )
-        enrollments = result.scalars().all()
+        rows = result.all()
 
-        for enr in enrollments:
-            user = await session.get(User, enr.user_id)
-            course = await session.get(Course, enr.course_id)
+        for enr, course, user in rows:
             if user and user.user_id:
                 try:
                     await bot.send_message(
@@ -28,20 +29,21 @@ async def notify_start_course():
                         parse_mode="HTML"
                     )
                 except Exception as e:
-                    print(f"Ошибка при отправке уведомления: {e}")
+                    print(f"Ошибка при уведомлении о начале курса: {e}")
 
-# уведомление об окончании курса
+# Уведомление об окончании курсов
 async def notify_end_course():
-    today = datetime.today().date()
+    today = datetime.now(scheduler.timezone).date()
     async with async_session() as session:
         result = await session.execute(
-            select(Enrollment).where(Enrollment.end_date == today)
+            select(Enrollment, Course, User)
+            .join(Course, Enrollment.course_id == Course.id)
+            .join(User, Enrollment.user_id == User.id)
+            .where(Enrollment.end_date == today)
         )
-        enrollments = result.scalars().all()
+        rows = result.all()
 
-        for enr in enrollments:
-            user = await session.get(User, enr.user_id)
-            course = await session.get(Course, enr.course_id)
+        for enr, course, user in rows:
             if user and user.user_id:
                 try:
                     await bot.send_message(
@@ -50,10 +52,16 @@ async def notify_end_course():
                         parse_mode="HTML"
                     )
                 except Exception as e:
-                    print(f"Ошибка при отправке уведомления: {e}")
+                    print(f"Ошибка при уведомлении о конце курса: {e}")
 
-# запуск планировщика
+# Запуск планировщика
 def setup_scheduler():
-    scheduler.add_job(notify_start_course, "cron", hour=9, minute=0)  # каждый день в 09:00
-    scheduler.add_job(notify_end_course, "cron", hour=9, minute=5)   # каждый день в 09:05
+    # 🔹 Для теста — каждые 1–2 минуты
+    scheduler.add_job(notify_start_course, "interval", minutes=1)
+    scheduler.add_job(notify_end_course, "interval", minutes=2)
+
+    # 🔹 Для продакшена — раскомментируй и убери interval
+    # scheduler.add_job(notify_start_course, "cron", hour=9, minute=0)
+    # scheduler.add_job(notify_end_course, "cron", hour=9, minute=5)
+
     scheduler.start()
