@@ -29,7 +29,7 @@ async def main():
     dp.include_router(admin_router)
     dp.include_router(certificates_router) 
 
-    # запускаем уведомления
+    
     setup_scheduler() 
 
     await bot.delete_webhook(drop_pending_updates=True)
