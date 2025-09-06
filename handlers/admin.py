@@ -7,16 +7,18 @@ from db.session import async_session
 from config.bot_config import ADMIN_ID
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
+from datetime import datetime
 
 admin_router = Router()
 
 
-
+# ---------------- FSM ----------------
 class AddCourseFSM(StatesGroup):
     title = State()
     description = State()
     price = State()
-
+    start_date = State()
+    end_date = State()
 
 
 class EditCourseFSM(StatesGroup):
@@ -24,7 +26,8 @@ class EditCourseFSM(StatesGroup):
     title = State()
     description = State()
     price = State()
-
+    start_date = State()
+    end_date = State()
 
 
 class CertificateFSM(StatesGroup):
@@ -33,7 +36,7 @@ class CertificateFSM(StatesGroup):
     file = State()
 
 
-
+# ---------------- Keyboards ----------------
 def admin_main_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -41,7 +44,7 @@ def admin_main_keyboard():
             [InlineKeyboardButton(text="📚 Управление курсами", callback_data="manage_courses")],
             [InlineKeyboardButton(text="➕ Добавить курс", callback_data="add_course")],
             [InlineKeyboardButton(text="🏅 Выдать сертификат", callback_data="add_certificate")],
-            [InlineKeyboardButton(text="🗑 Удалить всех пользователей", callback_data="delete_all_users")],  # ✅
+            [InlineKeyboardButton(text="🗑 Удалить всех пользователей", callback_data="delete_all_users")],
         ]
     )
 
@@ -52,14 +55,13 @@ def admin_back_keyboard():
     )
 
 
-
+# ---------------- Админ-меню ----------------
 @admin_router.message(F.text == "Управление курсами и пользователями")
 async def admin_main_menu(message: Message):
     if message.from_user.id != ADMIN_ID:
         await message.answer("⛔ Нет доступа.")
         return
     await message.answer("👤 Главное меню администратора:", reply_markup=admin_main_keyboard())
-
 
 
 @admin_router.callback_query(F.data == "admin_menu")
@@ -72,7 +74,7 @@ async def back_to_admin_menu(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-
+# ---------------- Пользователи ----------------
 @admin_router.callback_query(F.data == "show_users")
 async def show_users(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
@@ -89,29 +91,16 @@ async def show_users(callback: CallbackQuery):
         return
 
     for user in users:
-        text = f"👤 {user.name} ({user.phone or 'не указан'})\n🆔 Telegram ID: {user.user_id}\n🗄 DB ID: {user.id}"
+        text = f"👤 {user.name or 'Без имени'}\n🆔 Telegram ID: {user.user_id}\n🗄 DB ID: {user.id}"
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="🗑 Удалить этого пользователя", callback_data=f"delete_user:{user.id}")]
+                [InlineKeyboardButton(text="🗑 Удалить", callback_data=f"delete_user:{user.id}")]
             ]
         )
         await callback.message.answer(text, reply_markup=keyboard)
 
-        if user.photo:
-            await callback.message.answer_photo(user.photo, caption="Фото пользователя")
-
-        if user.document:
-            try:
-                await callback.message.answer_document(user.document, caption="Документ пользователя")
-            except Exception:
-                await callback.message.answer("⚠️ В поле документа сохранён неверный тип файла.")
-
-    await callback.message.answer(
-        "⬆️ Чтобы вернуться в главное меню администратора, нажмите кнопку ниже:",
-        reply_markup=admin_back_keyboard()
-    )
+    await callback.message.answer(reply_markup=admin_back_keyboard())
     await callback.answer()
-
 
 
 @admin_router.callback_query(F.data.startswith("delete_user:"))
@@ -133,7 +122,6 @@ async def delete_user(callback: CallbackQuery):
 
     await callback.message.edit_text(f"🗑 Пользователь «{user.name}» удалён.")
     await callback.answer()
-
 
 
 @admin_router.callback_query(F.data == "delete_all_users")
@@ -158,7 +146,7 @@ async def delete_all_users(callback: CallbackQuery):
     await callback.answer()
 
 
-
+# ---------------- Курсы ----------------
 @admin_router.callback_query(F.data == "manage_courses")
 async def manage_courses(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
@@ -174,19 +162,15 @@ async def manage_courses(callback: CallbackQuery):
         await callback.answer()
         return
 
-    text = "📚 Список курсов (для управления выберите один):"
+    text = "📚 Список курсов:"
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=course.title, callback_data=f"course_admin:{course.id}")]
             for course in courses
-        ] + [
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="admin_menu")]
-        ]
+        ] + [[InlineKeyboardButton(text="🔙 Назад", callback_data="admin_menu")]]
     )
-
     await callback.message.edit_text(text, reply_markup=keyboard)
     await callback.answer()
-
 
 
 @admin_router.callback_query(F.data.startswith("course_admin:"))
@@ -196,7 +180,6 @@ async def course_admin_menu(callback: CallbackQuery):
         return
 
     course_id = int(callback.data.split(":")[1])
-
     async with async_session() as session:
         course = await session.get(Course, course_id)
 
@@ -206,9 +189,9 @@ async def course_admin_menu(callback: CallbackQuery):
 
     text = (
         f"📘 <b>{course.title}</b>\n\n"
-        f"{course.description or 'Без описания'}\n\n"
-        f"💰 Цена: {course.price} руб.\n\n"
-        f"Выберите действие:"
+        f"{course.description or 'Без описания'}\n"
+        f"💰 {course.price} руб.\n"
+        f"📅 {course.start_date or 'не указана'} — {course.end_date or 'не указана'}"
     )
 
     keyboard = InlineKeyboardMarkup(
@@ -218,10 +201,8 @@ async def course_admin_menu(callback: CallbackQuery):
             [InlineKeyboardButton(text="🔙 Назад", callback_data="manage_courses")]
         ]
     )
-
     await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
     await callback.answer()
-
 
 
 @admin_router.callback_query(F.data.startswith("delete_course:"))
@@ -231,7 +212,6 @@ async def delete_course(callback: CallbackQuery):
         return
 
     course_id = int(callback.data.split(":")[1])
-
     async with async_session() as session:
         course = await session.get(Course, course_id)
         if not course:
@@ -244,75 +224,9 @@ async def delete_course(callback: CallbackQuery):
     await callback.answer()
 
 
-
-@admin_router.callback_query(F.data.startswith("edit_course:"))
-async def edit_course_start(callback: CallbackQuery, state: FSMContext):
-    if callback.from_user.id != ADMIN_ID:
-        await callback.answer("⛔ Нет доступа.", show_alert=True)
-        return
-
-    course_id = int(callback.data.split(":")[1])
-    await state.set_state(EditCourseFSM.title)
-    await state.update_data(course_id=course_id)
-
-    await callback.message.edit_text("✏️ Введите новое название курса:")
-    await callback.answer()
-
-
-@admin_router.message(EditCourseFSM.title)
-async def edit_course_title(message: Message, state: FSMContext):
-    await state.update_data(title=message.text.strip())
-    await state.set_state(EditCourseFSM.description)
-    await message.answer("Введите новое описание курса:")
-
-
-@admin_router.message(EditCourseFSM.description)
-async def edit_course_description(message: Message, state: FSMContext):
-    await state.update_data(description=message.text.strip())
-    await state.set_state(EditCourseFSM.price)
-    await message.answer("Введите новую цену курса (число):")
-
-
-@admin_router.message(EditCourseFSM.price, F.text.regexp(r"^\d+$"))
-async def edit_course_price(message: Message, state: FSMContext):
-    data = await state.get_data()
-    new_price = int(message.text.strip())
-
-    async with async_session() as session:
-        course = await session.get(Course, data["course_id"])
-        if not course:
-            await message.answer("⚠️ Курс не найден.")
-            await state.clear()
-            return
-
-        course.title = data["title"]
-        course.description = data["description"]
-        course.price = new_price
-
-        try:
-            await session.commit()
-        except IntegrityError:
-            await session.rollback()
-            await message.answer("⚠️ Курс с таким названием уже существует!")
-            await state.clear()
-            return
-
-    await message.answer(f"✅ Курс обновлён: {course.title} ({new_price} руб.)")
-    await state.clear()
-
-
-@admin_router.message(EditCourseFSM.price)
-async def edit_course_price_invalid(message: Message):
-    await message.answer("⚠️ Цена должна быть числом. Попробуйте ещё раз:")
-
-
-
+# ----------- Добавление курса -----------
 @admin_router.callback_query(F.data == "add_course")
 async def add_course_start(callback: CallbackQuery, state: FSMContext):
-    if callback.from_user.id != ADMIN_ID:
-        await callback.answer("⛔ Нет доступа.", show_alert=True)
-        return
-
     await state.set_state(AddCourseFSM.title)
     await callback.message.edit_text("➕ Введите название нового курса:")
     await callback.answer()
@@ -334,14 +248,43 @@ async def add_course_description(message: Message, state: FSMContext):
 
 @admin_router.message(AddCourseFSM.price, F.text.regexp(r"^\d+$"))
 async def add_course_price(message: Message, state: FSMContext):
+    await state.update_data(price=int(message.text.strip()))
+    await state.set_state(AddCourseFSM.start_date)
+    await message.answer("Введите дату начала курса (ДД.ММ.ГГГГ):")
+
+
+@admin_router.message(AddCourseFSM.start_date)
+async def add_course_start_date(message: Message, state: FSMContext):
+    try:
+        start_date = datetime.strptime(message.text.strip(), "%d.%m.%Y").date()
+    except ValueError:
+        await message.answer("⚠️ Неверный формат даты.")
+        return
+    await state.update_data(start_date=start_date)
+    await state.set_state(AddCourseFSM.end_date)
+    await message.answer("Введите дату окончания курса (ДД.ММ.ГГГГ):")
+
+
+@admin_router.message(AddCourseFSM.end_date)
+async def add_course_end_date(message: Message, state: FSMContext):
     data = await state.get_data()
-    price = int(message.text.strip())
+    try:
+        end_date = datetime.strptime(message.text.strip(), "%d.%m.%Y").date()
+    except ValueError:
+        await message.answer("⚠️ Неверный формат даты.")
+        return
+
+    if end_date < data["start_date"]:
+        await message.answer("⚠️ Дата окончания не может быть раньше даты начала.")
+        return
 
     async with async_session() as session:
         new_course = Course(
             title=data["title"],
             description=data["description"],
-            price=price
+            price=data["price"],
+            start_date=data["start_date"],
+            end_date=end_date
         )
         try:
             session.add(new_course)
@@ -352,38 +295,105 @@ async def add_course_price(message: Message, state: FSMContext):
             await state.clear()
             return
 
-    await message.answer(
-        f"✅ Курс «{data['title']}» добавлен (цена: {price} руб.)",
-        reply_markup=admin_back_keyboard()
-    )
+    await message.answer(f"✅ Курс «{data['title']}» добавлен!", reply_markup=admin_back_keyboard())
     await state.clear()
 
 
-@admin_router.message(AddCourseFSM.price)
-async def add_course_price_invalid(message: Message):
-    await message.answer("⚠️ Цена должна быть числом. Попробуйте ещё раз:")
+# ----------- Редактирование курса -----------
+@admin_router.callback_query(F.data.startswith("edit_course:"))
+async def edit_course_start(callback: CallbackQuery, state: FSMContext):
+    course_id = int(callback.data.split(":")[1])
+    await state.set_state(EditCourseFSM.title)
+    await state.update_data(course_id=course_id)
+    await callback.message.edit_text("✏️ Введите новое название курса:")
+    await callback.answer()
 
 
+@admin_router.message(EditCourseFSM.title)
+async def edit_course_title(message: Message, state: FSMContext):
+    await state.update_data(title=message.text.strip())
+    await state.set_state(EditCourseFSM.description)
+    await message.answer("Введите новое описание курса:")
 
-@admin_router.callback_query(F.data == "add_certificate")
-async def add_certificate_start(callback: CallbackQuery, state: FSMContext):
-    if callback.from_user.id != ADMIN_ID:
-        await callback.answer("⛔ Нет доступа.", show_alert=True)
+
+@admin_router.message(EditCourseFSM.description)
+async def edit_course_description(message: Message, state: FSMContext):
+    await state.update_data(description=message.text.strip())
+    await state.set_state(EditCourseFSM.price)
+    await message.answer("Введите новую цену (число):")
+
+
+@admin_router.message(EditCourseFSM.price, F.text.regexp(r"^\d+$"))
+async def edit_course_price(message: Message, state: FSMContext):
+    await state.update_data(price=int(message.text.strip()))
+    await state.set_state(EditCourseFSM.start_date)
+    await message.answer("Введите новую дату начала курса (ДД.ММ.ГГГГ):")
+
+
+@admin_router.message(EditCourseFSM.start_date)
+async def edit_course_start_date(message: Message, state: FSMContext):
+    try:
+        start_date = datetime.strptime(message.text.strip(), "%d.%m.%Y").date()
+    except ValueError:
+        await message.answer("⚠️ Неверный формат даты.")
+        return
+    await state.update_data(start_date=start_date)
+    await state.set_state(EditCourseFSM.end_date)
+    await message.answer("Введите новую дату окончания курса (ДД.ММ.ГГГГ):")
+
+
+@admin_router.message(EditCourseFSM.end_date)
+async def edit_course_end_date(message: Message, state: FSMContext):
+    data = await state.get_data()
+    try:
+        end_date = datetime.strptime(message.text.strip(), "%d.%m.%Y").date()
+    except ValueError:
+        await message.answer("⚠️ Неверный формат даты.")
         return
 
+    if end_date < data["start_date"]:
+        await message.answer("⚠️ Дата окончания не может быть раньше даты начала.")
+        return
+
+    async with async_session() as session:
+        course = await session.get(Course, data["course_id"])
+        if not course:
+            await message.answer("⚠️ Курс не найден.")
+            await state.clear()
+            return
+
+        course.title = data["title"]
+        course.description = data["description"]
+        course.price = data["price"]
+        course.start_date = data["start_date"]
+        course.end_date = end_date
+
+        try:
+            await session.commit()
+        except IntegrityError:
+            await session.rollback()
+            await message.answer("⚠️ Курс с таким названием уже существует!")
+            await state.clear()
+            return
+
+    await message.answer(f"✅ Курс «{data['title']}» обновлён.", reply_markup=admin_back_keyboard())
+    await state.clear()
+
+
+# ---------------- Сертификаты ----------------
+@admin_router.callback_query(F.data == "add_certificate")
+async def add_certificate_start(callback: CallbackQuery, state: FSMContext):
     await state.set_state(CertificateFSM.tg_user_id)
-    await callback.message.edit_text("Введите Telegram ID пользователя (его user_id):")
+    await callback.message.edit_text("Введите Telegram ID пользователя:")
     await callback.answer()
 
 
 @admin_router.message(CertificateFSM.tg_user_id, F.text.regexp(r"^\d+$"))
 async def add_certificate_user(message: Message, state: FSMContext):
     tg_id = int(message.text.strip())
-
     async with async_session() as session:
         result = await session.execute(select(User).where(User.user_id == tg_id))
         user = result.scalar_one_or_none()
-
         if not user:
             await message.answer("⚠️ Пользователь не найден.")
             await state.clear()
@@ -398,14 +408,13 @@ async def add_certificate_user(message: Message, state: FSMContext):
 async def add_certificate_title(message: Message, state: FSMContext):
     await state.update_data(title=message.text.strip())
     await state.set_state(CertificateFSM.file)
-    await message.answer("Отправьте файл сертификата (PDF или изображение):")
+    await message.answer("Отправьте файл сертификата:")
 
 
 @admin_router.message(CertificateFSM.file, F.document)
 async def add_certificate_file(message: Message, state: FSMContext):
     file_id = message.document.file_id
     data = await state.get_data()
-
     async with async_session() as session:
         new_cert = Certificate(
             title=data["title"],
@@ -415,5 +424,5 @@ async def add_certificate_file(message: Message, state: FSMContext):
         session.add(new_cert)
         await session.commit()
 
-    await message.answer(f"✅ Сертификат «{data['title']}» выдан пользователю (DB ID {data['user_db_id']}).")
+    await message.answer(f"✅ Сертификат «{data['title']}» выдан.")
     await state.clear()

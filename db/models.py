@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Mapped, DeclarativeBase, mapped_column, relationship
 from sqlalchemy import BigInteger, String, Integer, ForeignKey, Date, Boolean, select
 from sqlalchemy.ext.asyncio import AsyncAttrs
+from datetime import date
 from db.session import async_session
 from datetime import date
 
@@ -11,14 +12,8 @@ class Base(AsyncAttrs, DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    
-    user_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True, nullable=True)
-
-    name: Mapped[str] = mapped_column(String(100))
-    age: Mapped[int] = mapped_column(Integer, nullable=True)
-    phone: Mapped[str] = mapped_column(String(20), nullable=True, unique=True)
-    photo: Mapped[str] = mapped_column(String, nullable=True)
-    document: Mapped[str] = mapped_column(String, nullable=True)
+    user_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=True)
 
     enrollments = relationship(
         "Enrollment",
@@ -30,8 +25,6 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
-    
-    courses = relationship("Course", secondary="enrollments", viewonly=True)
 
 
 class Course(Base):
@@ -40,6 +33,9 @@ class Course(Base):
     title: Mapped[str] = mapped_column(String(100), unique=True)
     description: Mapped[str] = mapped_column(String(255), nullable=True)
     price: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    start_date: Mapped[date] = mapped_column(Date, nullable=True)
+    end_date: Mapped[date] = mapped_column(Date, nullable=True)
 
     enrollments = relationship(
         "Enrollment",
@@ -51,13 +47,8 @@ class Course(Base):
 class Enrollment(Base):
     __tablename__ = "enrollments"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"))
-
-    start_date: Mapped[date] = mapped_column(Date, nullable=True)
-    end_date: Mapped[date] = mapped_column(Date, nullable=True)
-    is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"))
 
     user = relationship("User", back_populates="enrollments")
     course = relationship("Course", back_populates="enrollments")
@@ -66,10 +57,10 @@ class Enrollment(Base):
 class Certificate(Base):
     __tablename__ = "certificates"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    title: Mapped[str] = mapped_column(String(255))
-    file_id: Mapped[str] = mapped_column(String)
-    
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    title: Mapped[str] = mapped_column(String(100))
+    file_id: Mapped[str] = mapped_column(String(255), nullable=True)
+
     user = relationship("User", back_populates="certificates")
 
 
