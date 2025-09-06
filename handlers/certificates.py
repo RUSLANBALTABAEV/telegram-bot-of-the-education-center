@@ -19,11 +19,9 @@ async def show_all_certificates(message: types.Message):
         certificates = result.scalars().all()
 
         if not certificates:
-            await message.answer("📭 Сертификатов пока нет.")
-            await message.answer("⬆️ Главное меню", reply_markup=main_menu(message.from_user.id))
+            await message.answer("📭 Сертификатов пока нет.", reply_markup=main_menu(message.from_user.id))
             return
 
-        
         for cert in certificates:
             user = await session.get(User, cert.user_id)
             text = f"🏅 {cert.title}\n👤 Пользователь: {user.name if user else cert.user_id}"
@@ -35,33 +33,31 @@ async def show_all_certificates(message: types.Message):
                 except Exception:
                     await message.answer("⚠️ Ошибка при отправке файла сертификата.")
 
-    await message.answer("⬆️ Главное меню", reply_markup=main_menu(message.from_user.id))
-
+    await message.answer(reply_markup=main_menu(message.from_user.id))
 
 
 @certificates_router.message(F.text == "Мои сертификаты")
 async def show_my_certificates(message: types.Message):
     async with async_session() as session:
-        
         result_user = await session.execute(
             select(User).where(User.user_id == message.from_user.id)
         )
         user = result_user.scalar_one_or_none()
 
         if not user:
-            await message.answer("⚠️ Вы не зарегистрированы. Используйте /register.")
-            await message.answer("⬆️ Главное меню", reply_markup=main_menu(message.from_user.id))
+            await message.answer(
+                "⚠️ Вы не зарегистрированы. Используйте /register.",
+                reply_markup=main_menu(message.from_user.id)
+            )
             return
 
-        
         result = await session.execute(
             select(Certificate).where(Certificate.user_id == user.id)
         )
         certificates = result.scalars().all()
 
     if not certificates:
-        await message.answer("📭 У вас пока нет сертификатов.")
-        await message.answer("⬆️ Главное меню", reply_markup=main_menu(message.from_user.id))
+        await message.answer("📭 У вас пока нет сертификатов.", reply_markup=main_menu(message.from_user.id))
         return
 
     for cert in certificates:
@@ -73,4 +69,4 @@ async def show_my_certificates(message: types.Message):
             except Exception:
                 await message.answer("⚠️ Ошибка при отправке сертификата.")
 
-    await message.answer("⬆️ Главное меню", reply_markup=main_menu(message.from_user.id))
+    await message.answer(reply_markup=main_menu(message.from_user.id))
