@@ -11,7 +11,7 @@ class Base(AsyncAttrs, DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    # Telegram ID
+    
     user_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True, nullable=True)
 
     name: Mapped[str] = mapped_column(String(100))
@@ -30,7 +30,7 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
-    # Удобное "view-only" свойство, чтобы быстро смотреть курсы пользователя
+    
     courses = relationship("Course", secondary="enrollments", viewonly=True)
 
 
