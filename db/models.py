@@ -5,7 +5,6 @@ from datetime import date
 from db.session import async_session
 
 
-# Базовый класс
 class Base(AsyncAttrs, DeclarativeBase):
     pass
 
@@ -15,13 +14,16 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)  # Telegram ID
+    user_id: Mapped[int | None] = mapped_column(Integer, unique=True, nullable=True)  # Telegram ID
     name: Mapped[str] = mapped_column(String(100), nullable=True)
 
     age: Mapped[int] = mapped_column(Integer, nullable=True)
     phone: Mapped[str] = mapped_column(String(20), unique=True, nullable=True)
     photo: Mapped[str] = mapped_column(String(255), nullable=True)      # file_id фото
     document: Mapped[str] = mapped_column(String(255), nullable=True)   # file_id документа
+
+    # флаг активности
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     enrollments: Mapped[list["Enrollment"]] = relationship(
         back_populates="user",
@@ -85,7 +87,7 @@ async def create_db(engine):
         await conn.run_sync(Base.metadata.create_all)
 
 
-# 🌱 Сидинг курсов (заполнение дефолтными)
+# 🌱 Сидинг курсов (дефолтные курсы)
 async def seed_courses():
     async with async_session() as session:
         result = await session.execute(select(Course))

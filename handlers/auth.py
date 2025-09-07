@@ -8,30 +8,37 @@ from fsm.auth import Auth
 
 auth_router = Router()
 
+
 @auth_router.message(Command("login"))
 @auth_router.message(F.text == "Авторизация")
 async def start_auth(message: types.Message, state: FSMContext):
     async with async_session() as session:
-        result = await session.execute(select(User).where(User.user_id == message.from_user.id))
+        result = await session.execute(
+            select(User).where(User.user_id == message.from_user.id)
+        )
         user = result.scalar_one_or_none()
 
-    if user:
+    if user and user.is_active:
         await message.answer("✅ Вы уже вошли в систему!")
     else:
         await message.answer("Введите ваш номер телефона (в формате +99890000xxxx):")
         await state.set_state(Auth.phone)
 
+
 @auth_router.message(Auth.phone, F.text.regexp(r"^\+?\d{10,15}$"))
 async def process_phone_auth(message: types.Message, state: FSMContext):
     async with async_session() as session:
-        result = await session.execute(select(User).where(User.phone == message.text))
+        result = await session.execute(
+            select(User).where(User.phone == message.text)
+        )
         user = result.scalar_one_or_none()
 
         if user:
-            if user.user_id:
-                await message.answer("⚠️ Этот аккаунт уже привязан.")
+            if user.user_id and user.is_active:
+                await message.answer("⚠️ Этот аккаунт уже привязан и активен.")
             else:
                 user.user_id = message.from_user.id
+                user.is_active = True
                 session.add(user)
                 await session.commit()
                 await message.answer("✅ Вход выполнен!")
@@ -40,15 +47,18 @@ async def process_phone_auth(message: types.Message, state: FSMContext):
 
     await state.clear()
 
+
 @auth_router.message(Command("logout"))
 @auth_router.message(F.text == "Выход")
 async def logout(message: types.Message):
     async with async_session() as session:
-        result = await session.execute(select(User).where(User.user_id == message.from_user.id))
+        result = await session.execute(
+            select(User).where(User.user_id == message.from_user.id)
+        )
         user = result.scalar_one_or_none()
 
-        if user:
-            user.user_id = None
+        if user and user.is_active:
+            user.is_active = False
             session.add(user)
             await session.commit()
             await message.answer("🚪 Вы вышли из системы.")
