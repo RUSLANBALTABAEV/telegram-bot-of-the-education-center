@@ -68,5 +68,3 @@ async def show_my_certificates(message: types.Message):
                 await message.answer_document(cert.file_id, caption="📄 Ваш сертификат")
             except Exception:
                 await message.answer("⚠️ Ошибка при отправке сертификата.")
-
-    
