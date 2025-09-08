@@ -11,6 +11,9 @@ def main_menu(user_id: int):
 
     builder = ReplyKeyboardBuilder()
 
+    # добавляем кнопку "Старт" в начало
+    builder.row(KeyboardButton(text="Старт"))
+
     # основные кнопки для всех
     builder.row(KeyboardButton(text="Регистрация"))
     builder.row(KeyboardButton(text="Авторизация"))
@@ -19,21 +22,17 @@ def main_menu(user_id: int):
     # безопасная проверка — ADMIN_ID может быть int или список/кортеж/строка с разделителем
     is_admin = False
     try:
-        # если в config положили список/кортеж/сет
         if isinstance(ADMIN_ID, (list, tuple, set)):
             is_admin = int(user_id) in [int(x) for x in ADMIN_ID]
         else:
-            # обычно ADMIN_ID — int
             is_admin = int(user_id) == int(ADMIN_ID)
     except Exception:
         is_admin = False
 
     if is_admin:
-        # Точные тексты — такие же, что и в handlers/certificates.py и handlers/admin.py
         builder.row(KeyboardButton(text="Сертификаты"))
         builder.row(KeyboardButton(text="Управление курсами и пользователями"))
     else:
-        # Точные тексты — такие же, что и в handlers/my_courses.py и handlers/certificates.py
         builder.row(KeyboardButton(text="Мои курсы"))
         builder.row(KeyboardButton(text="Мои сертификаты"))
 
