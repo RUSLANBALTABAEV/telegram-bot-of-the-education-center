@@ -333,6 +333,48 @@ translations = {
         "not_indicated": "ko'rsatilmagan",
         "unknown": "noma'lum",
         "user": "👤 Foydalanuvchi: {name}",
+
+        # Для русского (ru):
+        "select_user_for_certificate": "👥 Выберите пользователя для выдачи сертификата:",
+        "enter_certificate_title": "📝 Введите название сертификата:",
+        "certificate_title_too_short": "⚠️ Название сертификата должно содержать минимум 3 символа.",
+        "send_certificate_file": "📄 Отправьте файл сертификата (документ) или нажмите 'Без файла':",
+        "btn_no_file": "✅ Без файла",
+        "certificate_issued": "✅ Сертификат «{title}» выдан пользователю {name}",
+        "certificate_issued_with_file": "✅ Сертификат «{title}» выдан пользователю {name} с файлом",
+        "certificate_notification": "🏅 Поздравляем! Вам выдан сертификат:\n\n<b>{title}</b>",
+        "your_certificate_file": "📄 Ваш сертификат",
+        "error_invalid_certificate_data": "⚠️ Ошибка: данные не найдены. Попробуйте снова.",
+        "invalid_price_format": "⚠️ Введите корректную цену (только цифры):",
+        "invalid_certificate_file_format": "⚠️ Отправьте файл как документ или нажмите 'Без файла'",
+
+        # Для английского (en):
+        "select_user_for_certificate": "👥 Select user to issue certificate:",
+        "enter_certificate_title": "📝 Enter certificate title:",
+        "certificate_title_too_short": "⚠️ Certificate title must contain at least 3 characters.",
+        "send_certificate_file": "📄 Send certificate file (document) or click 'Without file':",
+        "btn_no_file": "✅ Without file",
+        "certificate_issued": "✅ Certificate «{title}» issued to user {name}",
+        "certificate_issued_with_file": "✅ Certificate «{title}» issued to user {name} with file",
+        "certificate_notification": "🏅 Congratulations! You have been issued a certificate:\n\n<b>{title}</b>",
+        "your_certificate_file": "📄 Your certificate",
+        "error_invalid_certificate_data": "⚠️ Error: data not found. Please try again.",
+        "invalid_price_format": "⚠️ Enter correct price (numbers only):",
+        "invalid_certificate_file_format": "⚠️ Send file as document or click 'Without file'",
+
+        # Для узбекского (uz):
+        "select_user_for_certificate": "👥 Sertifikat berish uchun foydalanuvchini tanlang:",
+        "enter_certificate_title": "📝 Sertifikat nomini kiriting:",
+        "certificate_title_too_short": "⚠️ Sertifikat nomi kamida 3 ta belgi bo'lishi kerak.",
+        "send_certificate_file": "📄 Sertifikat faylini yuboring (hujjat) yoki 'Faylsiz' tugmasini bosing:",
+        "btn_no_file": "✅ Faylsiz",
+        "certificate_issued": "✅ «{title}» sertifikati {name} foydalanuvchiga berildi",
+        "certificate_issued_with_file": "✅ «{title}» sertifikati {name} foydalanuvchiga fayl bilan berildi",
+        "certificate_notification": "🏅 Tabriklaymiz! Sizga sertifikat berildi:\n\n<b>{title}</b>",
+        "your_certificate_file": "📄 Sizning sertifikatingiz",
+        "error_invalid_certificate_data": "⚠️ Xato: ma'lumot topilmadi. Qayta urinib ko'ring.",
+        "invalid_price_format": "⚠️ To'g'ri narxni kiriting (faqat raqamlar):",
+        "invalid_certificate_file_format": "⚠️ Faylni hujjat sifatida yuboring yoki 'Faylsiz' tugmasini bosing"
     }
 }
 

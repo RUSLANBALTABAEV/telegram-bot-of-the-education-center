@@ -1,5 +1,6 @@
 from aiogram import Router, F
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Message
+from aiogram.enums import ContentType
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from db.models import User, Course, Certificate
@@ -39,7 +40,7 @@ class EditCourseFSM(StatesGroup):
     end_date = State()
 
 class CertificateFSM(StatesGroup):
-    tg_user_id = State()
+    user_selector = State()
     title = State()
     file = State()
 
@@ -375,3 +376,180 @@ async def add_course_end_date(message: Message, state: FSMContext):
 
     await message.answer(get_text("course_added", lang, title=data['title']), reply_markup=admin_back_keyboard(lang))
     await state.clear()
+
+# ---------------- Выдача сертификатов ----------------
+@admin_router.callback_query(F.data == "add_certificate")
+async def add_certificate_start(callback: CallbackQuery, state: FSMContext):
+    if callback.from_user.id != ADMIN_ID:
+        lang = await get_user_language(callback.from_user.id)
+        await callback.answer(get_text("no_access", lang), show_alert=True)
+        return
+
+    lang = await get_user_language(callback.from_user.id)
+    
+    # Получаем список всех пользователей
+    async with async_session() as session:
+        result = await session.execute(select(User))
+        users = result.scalars().all()
+
+    if not users:
+        await callback.answer(get_text("no_users", lang), show_alert=True)
+        return
+
+    # Создаем клавиатуру с пользователями
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(
+                text=f"{user.name or 'ID: ' + str(user.id)} ({user.phone or 'без телефона'})",
+                callback_data=f"cert_user:{user.id}"
+            )]
+            for user in users
+        ] + [[InlineKeyboardButton(text=get_text("btn_back", lang), callback_data="admin_menu")]]
+    )
+
+    try:
+        await callback.message.edit_text(
+            "👥 Выберите пользователя для выдачи сертификата:",
+            reply_markup=keyboard
+        )
+    except Exception:
+        await callback.message.answer(
+            "👥 Выберите пользователя для выдачи сертификата:",
+            reply_markup=keyboard
+        )
+    
+    await state.set_state(CertificateFSM.user_selector)
+    await callback.answer()
+
+@admin_router.callback_query(F.data.startswith("cert_user:"), CertificateFSM.user_selector)
+async def certificate_user_selected(callback: CallbackQuery, state: FSMContext):
+    if callback.from_user.id != ADMIN_ID:
+        return
+
+    lang = await get_user_language(callback.from_user.id)
+    user_id = int(callback.data.split(":")[1])
+    
+    # Сохраняем ID пользователя
+    await state.update_data(selected_user_id=user_id)
+    await state.set_state(CertificateFSM.title)
+    
+    try:
+        await callback.message.edit_text("📝 Введите название сертификата:")
+    except Exception:
+        await callback.message.answer("📝 Введите название сертификата:")
+    
+    await callback.answer()
+
+@admin_router.message(CertificateFSM.title)
+async def certificate_title_entered(message: Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        return
+        
+    lang = await get_user_language(message.from_user.id)
+    title = message.text.strip()
+    
+    if len(title) < 3:
+        await message.answer("⚠️ Название сертификата должно содержать минимум 3 символа.")
+        return
+    
+    await state.update_data(certificate_title=title)
+    await state.set_state(CertificateFSM.file)
+    await message.answer("📄 Отправьте файл сертификата (документ) или нажмите 'Без файла' чтобы создать сертификат без файла:", 
+                        reply_markup=InlineKeyboardMarkup(
+                            inline_keyboard=[[
+                                InlineKeyboardButton(text="✅ Без файла", callback_data="cert_no_file")
+                            ]]
+                        ))
+
+@admin_router.callback_query(F.data == "cert_no_file", CertificateFSM.file)
+async def certificate_no_file(callback: CallbackQuery, state: FSMContext):
+    if callback.from_user.id != ADMIN_ID:
+        return
+
+    await create_certificate(callback.message, state, file_id=None)
+    await callback.answer()
+
+@admin_router.message(CertificateFSM.file, F.content_type == ContentType.DOCUMENT)
+async def certificate_file_received(message: Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        return
+        
+    await create_certificate(message, state, file_id=message.document.file_id)
+
+async def create_certificate(message: Message, state: FSMContext, file_id: str = None):
+    lang = await get_user_language(message.from_user.id)
+    data = await state.get_data()
+    
+    user_id = data.get("selected_user_id")
+    title = data.get("certificate_title")
+    
+    if not user_id or not title:
+        await message.answer("⚠️ Ошибка: данные не найдены. Попробуйте снова.")
+        await state.clear()
+        return
+
+    async with async_session() as session:
+        # Проверяем, существует ли пользователь
+        user = await session.get(User, user_id)
+        if not user:
+            await message.answer("⚠️ Пользователь не найден.")
+            await state.clear()
+            return
+
+        # Создаем сертификат
+        certificate = Certificate(
+            user_id=user_id,
+            title=title,
+            file_id=file_id
+        )
+        
+        session.add(certificate)
+        await session.commit()
+
+        # Уведомляем пользователя
+        if user.user_id:
+            try:
+                user_lang = user.language or "ru"
+                notification_text = f"🏅 Поздравляем! Вам выдан сертификат:\n\n<b>{title}</b>"
+                
+                await message.bot.send_message(
+                    user.user_id,
+                    notification_text,
+                    parse_mode="HTML"
+                )
+                
+                # Если есть файл, отправляем его
+                if file_id:
+                    try:
+                        await message.bot.send_document(
+                            user.user_id,
+                            file_id,
+                            caption="📄 Ваш сертификат"
+                        )
+                    except Exception as e:
+                        print(f"Ошибка при отправке файла сертификата: {e}")
+                        
+            except Exception as e:
+                print(f"Ошибка при уведомлении пользователя: {e}")
+
+    # Подтверждение админу
+    confirmation_text = f"✅ Сертификат «{title}» выдан пользователю {user.name or 'ID: ' + str(user.id)}"
+    if file_id:
+        confirmation_text += " с файлом"
+    
+    await message.answer(confirmation_text, reply_markup=admin_back_keyboard(lang))
+    await state.clear()
+
+# ---------------- Обработка неправильных состояний ----------------
+@admin_router.message(AddCourseFSM.price)
+async def invalid_price(message: Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        return
+    lang = await get_user_language(message.from_user.id)
+    await message.answer("⚠️ Введите корректную цену (только цифры):")
+
+@admin_router.message(CertificateFSM.file)
+async def invalid_certificate_file(message: Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        return
+    await message.answer("⚠️ Отправьте файл как документ или нажмите 'Без файла'")
