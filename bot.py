@@ -1,8 +1,5 @@
 import asyncio
-from aiogram import Bot, Dispatcher
-from aiogram.client.default import DefaultBotProperties
-
-from config.bot_config import API_TOKEN
+from loader import bot, dp
 from handlers.registration import registration_router
 from handlers.auth import auth_router
 from handlers.start import start_router
@@ -14,16 +11,11 @@ from notifier import setup_scheduler
 from db.models import create_db, seed_courses
 from db.session import engine
 
-# создаём бота и диспетчер
-bot = Bot(token=API_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
-dp = Dispatcher()
-
-
 async def main():
     # создаём таблицы
     await create_db(engine)
 
-    # добавляем курсы, если таблица пустая
+    # добавляем дефолтные курсы
     await seed_courses()
 
     # регистрируем роутеры
@@ -41,7 +33,6 @@ async def main():
     # очищаем апдейты и стартуем бота
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
-
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -3,12 +3,10 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import select
 from db.session import async_session
 from db.models import Enrollment, User, Course
-from loader import bot   # ✅ импортируем bot отсюда
+from loader import bot
 
-# Планировщик с нужным часовым поясом
 scheduler = AsyncIOScheduler(timezone="Asia/Tashkent")
 
-# Уведомление о старте курсов
 async def notify_start_course():
     today = datetime.now(scheduler.timezone).date()
     async with async_session() as session:
@@ -19,7 +17,6 @@ async def notify_start_course():
             .where(Enrollment.start_date == today)
         )
         rows = result.all()
-
         for enr, course, user in rows:
             if user and user.user_id:
                 try:
@@ -31,7 +28,6 @@ async def notify_start_course():
                 except Exception as e:
                     print(f"Ошибка при уведомлении о начале курса: {e}")
 
-# Уведомление об окончании курсов
 async def notify_end_course():
     today = datetime.now(scheduler.timezone).date()
     async with async_session() as session:
@@ -42,7 +38,6 @@ async def notify_end_course():
             .where(Enrollment.end_date == today)
         )
         rows = result.all()
-
         for enr, course, user in rows:
             if user and user.user_id:
                 try:
@@ -54,14 +49,8 @@ async def notify_end_course():
                 except Exception as e:
                     print(f"Ошибка при уведомлении о конце курса: {e}")
 
-# Запуск планировщика
 def setup_scheduler():
-    # 🔹 Для теста — каждые 1–2 минуты
+    # Тестовые интервалы
     scheduler.add_job(notify_start_course, "interval", minutes=1)
     scheduler.add_job(notify_end_course, "interval", minutes=2)
-
-    # 🔹 Для продакшена — раскомментируй и убери interval
-    # scheduler.add_job(notify_start_course, "cron", hour=9, minute=0)
-    # scheduler.add_job(notify_end_course, "cron", hour=9, minute=5)
-
     scheduler.start()
