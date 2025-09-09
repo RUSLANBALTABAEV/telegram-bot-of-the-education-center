@@ -6,20 +6,29 @@ from sqlalchemy.orm import selectinload
 from db.models import User, Course, Enrollment
 from db.session import async_session
 from datetime import date
+from i18n.locales import get_text
 
 courses_router = Router()
 
+async def get_user_language(user_id: int) -> str:
+    """Получить язык пользователя из БД"""
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.user_id == user_id)
+        )
+        user = result.scalar_one_or_none()
+        return user.language if user and user.language else "ru"
 
 # Построение списка курсов
-async def build_courses_message():
+async def build_courses_message(lang: str = "ru"):
     async with async_session() as session:
         result = await session.execute(select(Course))
         courses = result.scalars().all()
 
     if not courses:
-        return "📚 Курсов пока нет.", None
+        return get_text("no_courses", lang), None
 
-    text = "📚 Доступные курсы:\n\nВыберите курс:"
+    text = get_text("available_courses", lang)
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=course.title, callback_data=f"course:{course.id}")]
@@ -28,27 +37,27 @@ async def build_courses_message():
     )
     return text, keyboard
 
-
 # Список курсов
 @courses_router.message(Command("courses"))
-@courses_router.message(F.text == "Курсы")
+@courses_router.message(F.text.in_(["Курсы", "Courses", "Kurslar"]))
 async def show_courses(message: Message):
-    text, keyboard = await build_courses_message()
+    lang = await get_user_language(message.from_user.id)
+    text, keyboard = await build_courses_message(lang)
     if not keyboard:
         await message.answer(text)
     else:
         await message.answer(text, reply_markup=keyboard)
 
-
 # Информация о курсе
 @courses_router.callback_query(F.data.startswith("course:"))
 async def show_course_info(callback: CallbackQuery):
+    lang = await get_user_language(callback.from_user.id)
     course_id = int(callback.data.split(":")[1])
 
     async with async_session() as session:
         course = await session.get(Course, course_id)
         if not course:
-            await callback.answer("⚠️ Курс не найден.", show_alert=True)
+            await callback.answer(get_text("course_not_found", lang), show_alert=True)
             return
 
         # Проверка пользователя
@@ -67,46 +76,55 @@ async def show_course_info(callback: CallbackQuery):
             enrollment = result.scalar_one_or_none()
 
     # Формируем текст курса
+    start_date = course.start_date.strftime("%d.%m.%Y") if course.start_date else get_text("not_indicated", lang)
+    end_date = course.end_date.strftime("%d.%m.%Y") if course.end_date else get_text("not_indicated", lang)
+    
     text = (
         f"📘 <b>{course.title}</b>\n\n"
         f"{course.description}\n\n"
-        f"💰 Цена: {course.price} руб.\n"
-        f"📅 Даты: {course.start_date or 'не указана'} — {course.end_date or 'не указана'}"
+        f"{get_text('price', lang, price=course.price)}\n"
+        f"{get_text('dates', lang, start=start_date, end=end_date)}"
     )
 
     # Кнопки
     if enrollment:
-        status = "✅ Завершён" if enrollment.is_completed else f"📅 До {enrollment.end_date or 'не указано'}"
-        text += f"\n\nСтатус: {status}"
-        action_button = InlineKeyboardButton(text="🚪 Отписаться", callback_data=f"unenroll:{course.id}")
+        if enrollment.is_completed:
+            status = get_text("status_completed", lang)
+        else:
+            end_date_str = enrollment.end_date.strftime("%d.%m.%Y") if enrollment.end_date else get_text("not_indicated", lang)
+            status = get_text("status_until", lang, date=end_date_str)
+        
+        text += f"\n\n{get_text('status', lang, status=status)}"
+        action_button = InlineKeyboardButton(text=get_text("btn_unenroll", lang), callback_data=f"unenroll:{course.id}")
     else:
-        action_button = InlineKeyboardButton(text="✅ Записаться", callback_data=f"enroll:{course.id}")
+        action_button = InlineKeyboardButton(text=get_text("btn_enroll", lang), callback_data=f"enroll:{course.id}")
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [action_button],
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_courses")]
+            [InlineKeyboardButton(text=get_text("btn_back", lang), callback_data="back_to_courses")]
         ]
     )
     await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
 
-
 # Запись на курс
 @courses_router.callback_query(F.data.startswith("enroll:"))
 async def enroll_course(callback: CallbackQuery):
+    lang = await get_user_language(callback.from_user.id)
     course_id = int(callback.data.split(":")[1])
+    
     async with async_session() as session:
         # Проверка пользователя
         result = await session.execute(select(User).where(User.user_id == callback.from_user.id))
         user = result.scalar_one_or_none()
         if not user:
-            await callback.answer("⚠️ Сначала зарегистрируйтесь (/register).", show_alert=True)
+            await callback.answer(get_text("register_first", lang), show_alert=True)
             return
 
         # Проверка курса
         course = await session.get(Course, course_id)
         if not course:
-            await callback.answer("⚠️ Курс не найден.", show_alert=True)
+            await callback.answer(get_text("course_not_found", lang), show_alert=True)
             return
 
         # Проверка записи
@@ -114,7 +132,7 @@ async def enroll_course(callback: CallbackQuery):
             select(Enrollment).where(Enrollment.user_id == user.id, Enrollment.course_id == course_id)
         )
         if existing.scalar_one_or_none():
-            await callback.answer("⚠️ Вы уже записаны.", show_alert=True)
+            await callback.answer(get_text("already_enrolled", lang), show_alert=True)
             return
 
         # Создаём запись с датами из курса
@@ -128,18 +146,19 @@ async def enroll_course(callback: CallbackQuery):
         session.add(enrollment)
         await session.commit()
 
-    await callback.message.edit_text(f"✅ Вы записались на курс «{course.title}»!")
-
+    await callback.message.edit_text(get_text("enrolled_success", lang, title=course.title))
 
 # Отписка
 @courses_router.callback_query(F.data.startswith("unenroll:"))
 async def unenroll_course(callback: CallbackQuery):
+    lang = await get_user_language(callback.from_user.id)
     course_id = int(callback.data.split(":")[1])
+    
     async with async_session() as session:
         result = await session.execute(select(User).where(User.user_id == callback.from_user.id))
         user = result.scalar_one_or_none()
         if not user:
-            await callback.answer("⚠️ Сначала зарегистрируйтесь (/register).", show_alert=True)
+            await callback.answer(get_text("register_first", lang), show_alert=True)
             return
 
         enrollment_q = await session.execute(
@@ -147,19 +166,19 @@ async def unenroll_course(callback: CallbackQuery):
         )
         enrollment = enrollment_q.scalar_one_or_none()
         if not enrollment:
-            await callback.answer("⚠️ Вы не записаны на этот курс.", show_alert=True)
+            await callback.answer(get_text("not_enrolled", lang), show_alert=True)
             return
 
         await session.delete(enrollment)
         await session.commit()
 
-    await callback.message.edit_text("🚪 Вы отписались от курса.")
-
+    await callback.message.edit_text(get_text("unenrolled_success", lang))
 
 # Назад
 @courses_router.callback_query(F.data == "back_to_courses")
 async def back_to_courses(callback: CallbackQuery):
-    text, keyboard = await build_courses_message()
+    lang = await get_user_language(callback.from_user.id)
+    text, keyboard = await build_courses_message(lang)
     if not keyboard:
         await callback.message.edit_text(text)
     else:

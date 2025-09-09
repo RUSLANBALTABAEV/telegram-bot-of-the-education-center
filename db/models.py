@@ -17,6 +17,7 @@ class User(Base):
     photo: Mapped[str] = mapped_column(String(255), nullable=True)
     document: Mapped[str] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    language: Mapped[str] = mapped_column(String(5), default="ru")  # Добавлен язык пользователя
 
     enrollments: Mapped[list["Enrollment"]] = relationship(
         back_populates="user",

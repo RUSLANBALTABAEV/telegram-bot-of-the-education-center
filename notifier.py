@@ -4,6 +4,7 @@ from sqlalchemy import select
 from db.session import async_session
 from db.models import Enrollment, User, Course
 from loader import bot
+from i18n.locales import get_text
 
 scheduler = AsyncIOScheduler(timezone="Asia/Tashkent")
 
@@ -20,9 +21,11 @@ async def notify_start_course():
         for enr, course, user in rows:
             if user and user.user_id:
                 try:
+                    lang = user.language or "ru"
+                    message_text = get_text("course_starts_today", lang, title=course.title)
                     await bot.send_message(
                         user.user_id,
-                        f"🚀 Сегодня стартует курс: <b>{course.title}</b>!\nЖелаем удачи 🎉",
+                        message_text,
                         parse_mode="HTML"
                     )
                 except Exception as e:
@@ -41,16 +44,18 @@ async def notify_end_course():
         for enr, course, user in rows:
             if user and user.user_id:
                 try:
+                    lang = user.language or "ru"
+                    message_text = get_text("course_ends_today", lang, title=course.title)
                     await bot.send_message(
                         user.user_id,
-                        f"📅 Сегодня завершился курс: <b>{course.title}</b>.\nСпасибо за обучение 🙌",
+                        message_text,
                         parse_mode="HTML"
                     )
                 except Exception as e:
                     print(f"Ошибка при уведомлении о конце курса: {e}")
 
 def setup_scheduler():
-    # Тестовые интервалы
-    scheduler.add_job(notify_start_course, "interval", minutes=1)
-    scheduler.add_job(notify_end_course, "interval", minutes=2)
+    # Тестовые интервалы - каждый день в 9:00
+    scheduler.add_job(notify_start_course, "cron", hour=9, minute=0)
+    scheduler.add_job(notify_end_course, "cron", hour=9, minute=0)
     scheduler.start()

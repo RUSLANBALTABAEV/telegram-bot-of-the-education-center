@@ -5,22 +5,32 @@ from sqlalchemy.orm import selectinload
 from db.models import User, Course, Certificate, Enrollment
 from db.session import async_session
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from i18n.locales import get_text
 
 my_courses_router = Router()
 
+async def get_user_language(user_id: int) -> str:
+    """Получить язык пользователя из БД"""
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.user_id == user_id)
+        )
+        user = result.scalar_one_or_none()
+        return user.language if user and user.language else "ru"
 
 @my_courses_router.message(Command("mycourses"))
-@my_courses_router.message(F.text == "Мои курсы")
+@my_courses_router.message(F.text.in_(["Мои курсы", "My Courses", "Mening kurslarim"]))
 async def show_my_courses(message: types.Message):
+    lang = await get_user_language(message.from_user.id)
+    
     async with async_session() as session:
-        
         result_user = await session.execute(
             select(User).where(User.user_id == message.from_user.id)
         )
         user = result_user.scalar_one_or_none()
 
         if not user:
-            await message.answer("⚠️ Вы не зарегистрированы. Используйте /register.")
+            await message.answer(get_text("not_registered", lang))
             return
 
         result = await session.execute(
@@ -31,22 +41,28 @@ async def show_my_courses(message: types.Message):
         enrollments = result.scalars().all()
 
     if not enrollments:
-        await message.answer("📭 У вас пока нет курсов.")
+        await message.answer(get_text("no_my_courses", lang))
         return
 
     for enr in enrollments:
         course = enr.course
-        status = "✅ Завершён" if enr.is_completed else f"📅 До {enr.end_date or 'не указано'}"
+        
+        if enr.is_completed:
+            status = get_text("status_completed", lang)
+        else:
+            end_date_str = enr.end_date.strftime("%d.%m.%Y") if enr.end_date else get_text("not_indicated", lang)
+            status = get_text("status_until", lang, date=end_date_str)
+            
         text = (
             f"📘 <b>{course.title}</b>\n\n"
-            f"{course.description or 'Без описания'}\n\n"
-            f"💰 Цена: {course.price} руб.\n\n"
-            f"Статус: {status}"
+            f"{course.description or get_text('no_description', lang)}\n\n"
+            f"{get_text('price', lang, price=course.price)}\n\n"
+            f"{get_text('status', lang, status=status)}"
         )
 
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="🚪 Отписаться", callback_data=f"unenroll:{course.id}")]
+                [InlineKeyboardButton(text=get_text("btn_unenroll", lang), callback_data=f"unenroll:{course.id}")]
             ]
         )
 
