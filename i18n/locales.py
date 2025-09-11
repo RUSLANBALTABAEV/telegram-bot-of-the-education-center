@@ -91,6 +91,7 @@ translations = {
         "course_list": "📚 Список курсов:",
         "btn_edit": "✏️ Редактировать",
         "course_deleted": "🗑 Курс «{title}» удалён.",
+        "course_updated": "✅ Курс «{title}» успешно обновлён!",
         "enter_course_title": "➕ Введите название нового курса:",
         "enter_course_description": "Введите описание курса:",
         "enter_course_price": "Введите цену курса (число):",
@@ -100,6 +101,27 @@ translations = {
         "end_date_before_start": "⚠️ Дата окончания не может быть раньше даты начала.",
         "course_title_exists": "⚠️ Курс с таким названием уже существует!",
         "course_added": "✅ Курс «{title}» добавлен!",
+        
+        # Редактирование курса
+        "edit_course_title": "✏️ Редактирование курса «{title}»\n\nВведите новое название курса (текущее: {current}):",
+        "edit_course_description": "Введите новое описание курса:",
+        "edit_course_price": "Введите новую цену курса:",
+        "edit_course_start_date": "Введите новую дату начала курса (ДД.ММ.ГГГГ):",
+        "edit_course_end_date": "Введите новую дату окончания курса (ДД.ММ.ГГГГ):",
+        
+        # Сертификаты - администратор
+        "select_user_for_certificate": "👥 Выберите пользователя для выдачи сертификата:",
+        "enter_certificate_title": "📝 Введите название сертификата:",
+        "certificate_title_too_short": "⚠️ Название сертификата должно содержать минимум 3 символа.",
+        "send_certificate_file": "📄 Отправьте файл сертификата (документ) или нажмите 'Без файла':",
+        "btn_no_file": "✅ Без файла",
+        "certificate_issued": "✅ Сертификат «{title}» выдан пользователю {name}",
+        "certificate_issued_with_file": "✅ Сертификат «{title}» выдан пользователю {name} с файлом",
+        "certificate_notification": "🏅 Поздравляем! Вам выдан сертификат:\n\n<b>{title}</b>",
+        "your_certificate_file": "📄 Ваш сертификат",
+        "error_invalid_certificate_data": "⚠️ Ошибка: данные не найдены. Попробуйте снова.",
+        "invalid_price_format": "⚠️ Введите корректную цену (только цифры):",
+        "invalid_certificate_file_format": "⚠️ Отправьте файл как документ или нажмите 'Без файла'",
         
         # Уведомления
         "course_starts_today": "🚀 Сегодня стартует курс: <b>{title}</b>!\nЖелаем удачи 🎉",
@@ -158,7 +180,7 @@ translations = {
         "no_courses": "📚 No courses available yet.",
         "available_courses": "📚 Available courses:\n\nChoose a course:",
         "course_not_found": "⚠️ Course not found.",
-        "price": "💰 Price: {price} rub.",
+        "price": "💰 Price: {price} sum.",
         "dates": "📅 Dates: {start} — {end}",
         "status": "Status: {status}",
         "status_completed": "✅ Completed",
@@ -202,6 +224,7 @@ translations = {
         "course_list": "📚 Courses list:",
         "btn_edit": "✏️ Edit",
         "course_deleted": "🗑 Course «{title}» deleted.",
+        "course_updated": "✅ Course «{title}» successfully updated!",
         "enter_course_title": "➕ Enter new course title:",
         "enter_course_description": "Enter course description:",
         "enter_course_price": "Enter course price (number):",
@@ -211,6 +234,27 @@ translations = {
         "end_date_before_start": "⚠️ End date cannot be earlier than start date.",
         "course_title_exists": "⚠️ Course with this title already exists!",
         "course_added": "✅ Course «{title}» added!",
+        
+        # Course editing
+        "edit_course_title": "✏️ Editing course «{title}»\n\nEnter new course title (current: {current}):",
+        "edit_course_description": "Enter new course description:",
+        "edit_course_price": "Enter new course price:",
+        "edit_course_start_date": "Enter new course start date (DD.MM.YYYY):",
+        "edit_course_end_date": "Enter new course end date (DD.MM.YYYY):",
+        
+        # Certificates - admin
+        "select_user_for_certificate": "👥 Select user to issue certificate:",
+        "enter_certificate_title": "📝 Enter certificate title:",
+        "certificate_title_too_short": "⚠️ Certificate title must contain at least 3 characters.",
+        "send_certificate_file": "📄 Send certificate file (document) or click 'Without file':",
+        "btn_no_file": "✅ Without file",
+        "certificate_issued": "✅ Certificate «{title}» issued to user {name}",
+        "certificate_issued_with_file": "✅ Certificate «{title}» issued to user {name} with file",
+        "certificate_notification": "🏅 Congratulations! You have been issued a certificate:\n\n<b>{title}</b>",
+        "your_certificate_file": "📄 Your certificate",
+        "error_invalid_certificate_data": "⚠️ Error: data not found. Please try again.",
+        "invalid_price_format": "⚠️ Enter correct price (numbers only):",
+        "invalid_certificate_file_format": "⚠️ Send file as document or click 'Without file'",
         
         # Notifications
         "course_starts_today": "🚀 Course starts today: <b>{title}</b>!\nGood luck 🎉",
@@ -313,6 +357,7 @@ translations = {
         "course_list": "📚 Kurslar ro'yxati:",
         "btn_edit": "✏️ Tahrirlash",
         "course_deleted": "🗑 «{title}» kursi o'chirildi.",
+        "course_updated": "✅ «{title}» kursi muvaffaqiyatli yangilandi!",
         "enter_course_title": "➕ Yangi kurs nomini kiriting:",
         "enter_course_description": "Kurs tavsifini kiriting:",
         "enter_course_price": "Kurs narxini kiriting (raqam):",
@@ -323,46 +368,14 @@ translations = {
         "course_title_exists": "⚠️ Bunday nomli kurs allaqachon mavjud!",
         "course_added": "✅ «{title}» kursi qo'shildi!",
         
-        # Bildirishnomalar
-        "course_starts_today": "🚀 Bugun kurs boshlanadi: <b>{title}</b>!\nOmad yor bo'lsin 🎉",
-        "course_ends_today": "📅 Bugun kurs tugadi: <b>{title}</b>.\nO'qiganingiz uchun rahmat 🙌",
+        # Kursni tahrirlash
+        "edit_course_title": "✏️ «{title}» kursini tahrirlash\n\nYangi kurs nomini kiriting (hozirgi: {current}):",
+        "edit_course_description": "Yangi kurs tavsifini kiriting:",
+        "edit_course_price": "Yangi kurs narxini kiriting:",
+        "edit_course_start_date": "Yangi boshlanish sanasini kiriting (KK.OO.YYYY):",
+        "edit_course_end_date": "Yangi tugash sanasini kiriting (KK.OO.YYYY):",
         
-        # Umumiy
-        "without_name": "Ismsiz",
-        "not_specified": "ko'rsatilmagan",
-        "not_indicated": "ko'rsatilmagan",
-        "unknown": "noma'lum",
-        "user": "👤 Foydalanuvchi: {name}",
-
-        # Для русского (ru):
-        "select_user_for_certificate": "👥 Выберите пользователя для выдачи сертификата:",
-        "enter_certificate_title": "📝 Введите название сертификата:",
-        "certificate_title_too_short": "⚠️ Название сертификата должно содержать минимум 3 символа.",
-        "send_certificate_file": "📄 Отправьте файл сертификата (документ) или нажмите 'Без файла':",
-        "btn_no_file": "✅ Без файла",
-        "certificate_issued": "✅ Сертификат «{title}» выдан пользователю {name}",
-        "certificate_issued_with_file": "✅ Сертификат «{title}» выдан пользователю {name} с файлом",
-        "certificate_notification": "🏅 Поздравляем! Вам выдан сертификат:\n\n<b>{title}</b>",
-        "your_certificate_file": "📄 Ваш сертификат",
-        "error_invalid_certificate_data": "⚠️ Ошибка: данные не найдены. Попробуйте снова.",
-        "invalid_price_format": "⚠️ Введите корректную цену (только цифры):",
-        "invalid_certificate_file_format": "⚠️ Отправьте файл как документ или нажмите 'Без файла'",
-
-        # Для английского (en):
-        "select_user_for_certificate": "👥 Select user to issue certificate:",
-        "enter_certificate_title": "📝 Enter certificate title:",
-        "certificate_title_too_short": "⚠️ Certificate title must contain at least 3 characters.",
-        "send_certificate_file": "📄 Send certificate file (document) or click 'Without file':",
-        "btn_no_file": "✅ Without file",
-        "certificate_issued": "✅ Certificate «{title}» issued to user {name}",
-        "certificate_issued_with_file": "✅ Certificate «{title}» issued to user {name} with file",
-        "certificate_notification": "🏅 Congratulations! You have been issued a certificate:\n\n<b>{title}</b>",
-        "your_certificate_file": "📄 Your certificate",
-        "error_invalid_certificate_data": "⚠️ Error: data not found. Please try again.",
-        "invalid_price_format": "⚠️ Enter correct price (numbers only):",
-        "invalid_certificate_file_format": "⚠️ Send file as document or click 'Without file'",
-
-        # Для узбекского (uz):
+        # Sertifikatlar - administrator
         "select_user_for_certificate": "👥 Sertifikat berish uchun foydalanuvchini tanlang:",
         "enter_certificate_title": "📝 Sertifikat nomini kiriting:",
         "certificate_title_too_short": "⚠️ Sertifikat nomi kamida 3 ta belgi bo'lishi kerak.",
@@ -374,7 +387,18 @@ translations = {
         "your_certificate_file": "📄 Sizning sertifikatingiz",
         "error_invalid_certificate_data": "⚠️ Xato: ma'lumot topilmadi. Qayta urinib ko'ring.",
         "invalid_price_format": "⚠️ To'g'ri narxni kiriting (faqat raqamlar):",
-        "invalid_certificate_file_format": "⚠️ Faylni hujjat sifatida yuboring yoki 'Faylsiz' tugmasini bosing"
+        "invalid_certificate_file_format": "⚠️ Faylni hujjat sifatida yuboring yoki 'Faylsiz' tugmasini bosing",
+        
+        # Bildirishnomalar
+        "course_starts_today": "🚀 Bugun kurs boshlanadi: <b>{title}</b>!\nOmad yor bo'lsin 🎉",
+        "course_ends_today": "📅 Bugun kurs tugadi: <b>{title}</b>.\nO'qiganingiz uchun rahmat 🙌",
+        
+        # Umumiy
+        "without_name": "Ismsiz",
+        "not_specified": "ko'rsatilmagan",
+        "not_indicated": "ko'rsatilmagan",
+        "unknown": "noma'lum",
+        "user": "👤 Foydalanuvchi: {name}",
     }
 }
 

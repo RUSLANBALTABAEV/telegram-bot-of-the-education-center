@@ -377,6 +377,126 @@ async def add_course_end_date(message: Message, state: FSMContext):
     await message.answer(get_text("course_added", lang, title=data['title']), reply_markup=admin_back_keyboard(lang))
     await state.clear()
 
+# ---------------- Редактирование курса ----------------
+@admin_router.callback_query(F.data.startswith("edit_course:"))
+async def edit_course_start(callback: CallbackQuery, state: FSMContext):
+    if callback.from_user.id != ADMIN_ID:
+        lang = await get_user_language(callback.from_user.id)
+        await callback.answer(get_text("no_access", lang), show_alert=True)
+        return
+
+    lang = await get_user_language(callback.from_user.id)
+    course_id = int(callback.data.split(":")[1])
+    
+    async with async_session() as session:
+        course = await session.get(Course, course_id)
+        if not course:
+            await callback.answer(get_text("course_not_found", lang), show_alert=True)
+            return
+
+    await state.update_data(course_id=course_id)
+    await state.set_state(EditCourseFSM.title)
+    try:
+        await callback.message.edit_text(f"✏️ Редактирование курса «{course.title}»\n\nВведите новое название курса (текущее: {course.title}):")
+    except Exception:
+        await callback.message.answer(f"✏️ Редактирование курса «{course.title}»\n\nВведите новое название курса (текущее: {course.title}):")
+    await callback.answer()
+
+@admin_router.message(EditCourseFSM.title)
+async def edit_course_title(message: Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        return
+        
+    lang = await get_user_language(message.from_user.id)
+    await state.update_data(new_title=message.text.strip())
+    await state.set_state(EditCourseFSM.description)
+    await message.answer("Введите новое описание курса:")
+
+@admin_router.message(EditCourseFSM.description)
+async def edit_course_description(message: Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        return
+        
+    lang = await get_user_language(message.from_user.id)
+    await state.update_data(new_description=message.text.strip())
+    await state.set_state(EditCourseFSM.price)
+    await message.answer("Введите новую цену курса:")
+
+@admin_router.message(EditCourseFSM.price, F.text.regexp(r"^\d+$"))
+async def edit_course_price(message: Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        return
+        
+    lang = await get_user_language(message.from_user.id)
+    await state.update_data(new_price=int(message.text.strip()))
+    await state.set_state(EditCourseFSM.start_date)
+    await message.answer("Введите новую дату начала курса (ДД.ММ.ГГГГ):")
+
+@admin_router.message(EditCourseFSM.start_date)
+async def edit_course_start_date(message: Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        return
+        
+    lang = await get_user_language(message.from_user.id)
+    try:
+        start_date = datetime.strptime(message.text.strip(), "%d.%m.%Y").date()
+    except ValueError:
+        await message.answer(get_text("invalid_date_format", lang))
+        return
+    await state.update_data(new_start_date=start_date)
+    await state.set_state(EditCourseFSM.end_date)
+    await message.answer("Введите новую дату окончания курса (ДД.ММ.ГГГГ):")
+
+@admin_router.message(EditCourseFSM.end_date)
+async def edit_course_end_date(message: Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        return
+        
+    lang = await get_user_language(message.from_user.id)
+    data = await state.get_data()
+    
+    try:
+        end_date = datetime.strptime(message.text.strip(), "%d.%m.%Y").date()
+    except ValueError:
+        await message.answer(get_text("invalid_date_format", lang))
+        return
+
+    if end_date < data["new_start_date"]:
+        await message.answer(get_text("end_date_before_start", lang))
+        return
+
+    # Обновляем курс в базе данных
+    course_id = data["course_id"]
+    async with async_session() as session:
+        course = await session.get(Course, course_id)
+        if not course:
+            await message.answer(get_text("course_not_found", lang))
+            await state.clear()
+            return
+
+        # Проверяем, не существует ли курса с таким названием (кроме текущего)
+        result = await session.execute(
+            select(Course).where(Course.title == data["new_title"], Course.id != course_id)
+        )
+        existing_course = result.scalar_one_or_none()
+        
+        if existing_course:
+            await message.answer(get_text("course_title_exists", lang))
+            await state.clear()
+            return
+
+        # Обновляем данные курса
+        course.title = data["new_title"]
+        course.description = data["new_description"]
+        course.price = data["new_price"]
+        course.start_date = data["new_start_date"]
+        course.end_date = end_date
+        
+        await session.commit()
+
+    await message.answer(f"✅ Курс «{data['new_title']}» успешно обновлён!", reply_markup=admin_back_keyboard(lang))
+    await state.clear()
+
 # ---------------- Выдача сертификатов ----------------
 @admin_router.callback_query(F.data == "add_certificate")
 async def add_certificate_start(callback: CallbackQuery, state: FSMContext):
@@ -542,7 +662,14 @@ async def create_certificate(message: Message, state: FSMContext, file_id: str =
 
 # ---------------- Обработка неправильных состояний ----------------
 @admin_router.message(AddCourseFSM.price)
-async def invalid_price(message: Message, state: FSMContext):
+async def invalid_add_price(message: Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        return
+    lang = await get_user_language(message.from_user.id)
+    await message.answer("⚠️ Введите корректную цену (только цифры):")
+
+@admin_router.message(EditCourseFSM.price)
+async def invalid_edit_price(message: Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
         return
     lang = await get_user_language(message.from_user.id)
