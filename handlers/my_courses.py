@@ -1,16 +1,29 @@
+"""
+Обработчики для просмотра курсов пользователя.
+"""
 from aiogram import Router, F, types
 from aiogram.filters import Command
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from db.models import User, Course, Certificate, Enrollment
+
+from db.models import User, Enrollment
 from db.session import async_session
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from i18n.locales import get_text
 
 my_courses_router = Router()
 
+
 async def get_user_language(user_id: int) -> str:
-    """Получить язык пользователя из БД"""
+    """
+    Получить язык пользователя из БД.
+    
+    Args:
+        user_id: Telegram ID пользователя
+        
+    Returns:
+        Код языка (ru/en/uz), по умолчанию 'ru'
+    """
     async with async_session() as session:
         result = await session.execute(
             select(User).where(User.user_id == user_id)
@@ -18,9 +31,18 @@ async def get_user_language(user_id: int) -> str:
         user = result.scalar_one_or_none()
         return user.language if user and user.language else "ru"
 
+
 @my_courses_router.message(Command("mycourses"))
-@my_courses_router.message(F.text.in_(["Мои курсы", "My Courses", "Mening kurslarim"]))
-async def show_my_courses(message: types.Message):
+@my_courses_router.message(
+    F.text.in_(["Мои курсы", "My Courses", "Mening kurslarim"])
+)
+async def show_my_courses(message: types.Message) -> None:
+    """
+    Показать курсы, на которые записан пользователь.
+    
+    Args:
+        message: Входящее сообщение
+    """
     lang = await get_user_language(message.from_user.id)
     
     async with async_session() as session:
@@ -50,7 +72,11 @@ async def show_my_courses(message: types.Message):
         if enr.is_completed:
             status = get_text("status_completed", lang)
         else:
-            end_date_str = enr.end_date.strftime("%d.%m.%Y") if enr.end_date else get_text("not_indicated", lang)
+            end_date_str = (
+                enr.end_date.strftime("%d.%m.%Y")
+                if enr.end_date
+                else get_text("not_indicated", lang)
+            )
             status = get_text("status_until", lang, date=end_date_str)
             
         text = (
@@ -62,7 +88,12 @@ async def show_my_courses(message: types.Message):
 
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text=get_text("btn_unenroll", lang), callback_data=f"unenroll:{course.id}")]
+                [
+                    InlineKeyboardButton(
+                        text=get_text("btn_unenroll", lang),
+                        callback_data=f"unenroll:{course.id}"
+                    )
+                ]
             ]
         )
 

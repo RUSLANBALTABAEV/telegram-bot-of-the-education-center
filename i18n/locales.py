@@ -1,16 +1,26 @@
-from aiogram_i18n import I18nContext
+"""
+Модуль локализации для мультиязычной поддержки бота.
+Поддерживает русский, английский и узбекский языки.
+"""
+from typing import Any
+
+# Константа для минимальной длины названия сертификата
+MIN_CERTIFICATE_TITLE_LENGTH = 3
 
 # Словари переводов
-translations = {
+TRANSLATIONS = {
     "ru": {
         # Стартовые сообщения
-        "welcome": "👋 Здравствуйте! Добро пожаловать!\nВыберите действие:",
+        "welcome": (
+            "👋 Здравствуйте! Добро пожаловать!\n"
+            "Выберите действие:"
+        ),
         "choose_language": "🌐 Выберите язык:",
         "language_changed": "✅ Язык изменен на русский",
         
         # Кнопки главного меню
         "btn_start": "Старт",
-        "btn_registration": "Регистрация", 
+        "btn_registration": "Регистрация",
         "btn_auth": "Авторизация",
         "btn_courses": "Курсы",
         "btn_my_courses": "Мои курсы",
@@ -21,31 +31,61 @@ translations = {
         "btn_language": "🌐 Язык",
         
         # Регистрация
-        "already_registered": "⚠️ Вы уже зарегистрированы.\n👤 Имя: {name}\n📱 Телефон: {phone}",
+        "already_registered": (
+            "⚠️ Вы уже зарегистрированы.\n"
+            "👤 Имя: {name}\n"
+            "📱 Телефон: {phone}"
+        ),
         "enter_name": "Введите ваше имя:",
         "enter_age": "Введите ваш возраст (числом):",
-        "invalid_age": "⚠️ Укажите реальный возраст (1–120). Попробуйте ещё раз.",
+        "invalid_age": (
+            "⚠️ Укажите реальный возраст (1–120). "
+            "Попробуйте ещё раз."
+        ),
         "enter_phone": "Введите ваш номер телефона:",
         "phone_exists": "⚠️ Этот номер уже зарегистрирован.",
-        "send_photo": "Отправьте вашу фотографию (как фото, не файлом):",
-        "send_document": "Отправьте документ (PDF или изображение как файл):",
-        "invalid_document": "⚠️ Допустимы только PDF или изображения (JPG/JPEG/PNG).",
+        "send_photo": (
+            "Отправьте вашу фотографию "
+            "(как фото, не файлом):"
+        ),
+        "send_document": (
+            "Отправьте документ "
+            "(PDF или изображение как файл):"
+        ),
+        "invalid_document": (
+            "⚠️ Допустимы только PDF или изображения "
+            "(JPG/JPEG/PNG)."
+        ),
         "registration_complete": "✅ Регистрация завершена!",
         "user_exists": "⚠️ Пользователь уже существует.",
-        "new_user_notification": "👤 Новый пользователь: {name}, Телефон: {phone}, TG ID: {user_id}",
+        "new_user_notification": (
+            "👤 Новый пользователь: {name}, "
+            "Телефон: {phone}, TG ID: {user_id}"
+        ),
         
         # Авторизация
         "already_logged_in": "✅ Вы уже вошли в систему!",
-        "enter_phone_auth": "Введите ваш номер телефона (в формате +99890000xxxx):",
-        "account_already_active": "⚠️ Этот аккаунт уже привязан и активен.",
+        "enter_phone_auth": (
+            "Введите ваш номер телефона "
+            "(в формате +99890000xxxx):"
+        ),
+        "account_already_active": (
+            "⚠️ Этот аккаунт уже привязан и активен."
+        ),
         "login_success": "✅ Вход выполнен!",
-        "user_not_found": "⚠️ Пользователь не найден. Используйте /register.",
+        "user_not_found": (
+            "⚠️ Пользователь не найден. "
+            "Используйте /register."
+        ),
         "logout_success": "🚪 Вы вышли из системы.",
         "not_authorized": "⚠️ Вы не авторизованы.",
         
         # Курсы
         "no_courses": "📚 Курсов пока нет.",
-        "available_courses": "📚 Доступные курсы:\n\nВыберите курс:",
+        "available_courses": (
+            "📚 Доступные курсы:\n\n"
+            "Выберите курс:"
+        ),
         "course_not_found": "⚠️ Курс не найден.",
         "price": "💰 Цена: {price} сум.",
         "dates": "📅 Даты: {start} — {end}",
@@ -55,14 +95,19 @@ translations = {
         "btn_enroll": "✅ Записаться",
         "btn_unenroll": "🚪 Отписаться",
         "btn_back": "🔙 Назад",
-        "register_first": "⚠️ Сначала зарегистрируйтесь (/register).",
+        "register_first": (
+            "⚠️ Сначала зарегистрируйтесь (/register)."
+        ),
         "already_enrolled": "⚠️ Вы уже записаны.",
         "enrolled_success": "✅ Вы записались на курс «{title}»!",
         "not_enrolled": "⚠️ Вы не записаны на этот курс.",
         "unenrolled_success": "🚪 Вы отписались от курса.",
         
         # Мои курсы
-        "not_registered": "⚠️ Вы не зарегистрированы. Используйте /register.",
+        "not_registered": (
+            "⚠️ Вы не зарегистрированы. "
+            "Используйте /register."
+        ),
         "no_my_courses": "📭 У вас пока нет курсов.",
         "no_description": "Без описания",
         
@@ -70,7 +115,9 @@ translations = {
         "no_access": "⛔ Нет доступа.",
         "no_certificates": "📭 Сертификатов пока нет.",
         "no_my_certificates": "📭 У вас пока нет сертификатов.",
-        "certificate_file_error": "⚠️ Ошибка при отправке файла сертификата.",
+        "certificate_file_error": (
+            "⚠️ Ошибка при отправке файла сертификата."
+        ),
         "your_certificate": "📄 Ваш сертификат",
         "certificate_file": "📄 Файл сертификата",
         
@@ -84,7 +131,10 @@ translations = {
         "btn_admin_back": "🔝 Главное меню администратора",
         "no_users": "📭 Пользователей пока нет.",
         "btn_delete": "🗑 Удалить",
-        "user_deleted": "🗑 Пользователь «{name}» (TG ID: {telegram_id}) удалён.",
+        "user_deleted": (
+            "🗑 Пользователь «{name}» "
+            "(TG ID: {telegram_id}) удалён."
+        ),
         "user_not_found": "⚠️ Пользователь не найден.",
         "no_users_to_delete": "⚠️ Пользователей нет.",
         "all_users_deleted": "🗑 Все пользователи удалены.",
@@ -95,37 +145,86 @@ translations = {
         "enter_course_title": "➕ Введите название нового курса:",
         "enter_course_description": "Введите описание курса:",
         "enter_course_price": "Введите цену курса (число):",
-        "enter_start_date": "Введите дату начала курса (ДД.MM.ГГГГ):",
-        "invalid_date_format": "⚠️ Неверный формат даты. Введите снова (ДД.MM.ГГГГ):",
-        "enter_end_date": "Введите дату окончания курса (ДД.MM.ГГГГ):",
-        "end_date_before_start": "⚠️ Дата окончания не может быть раньше даты начала.",
-        "course_title_exists": "⚠️ Курс с таким названием уже существует!",
+        "enter_start_date": (
+            "Введите дату начала курса (ДД.MM.ГГГГ):"
+        ),
+        "invalid_date_format": (
+            "⚠️ Неверный формат даты. "
+            "Введите снова (ДД.MM.ГГГГ):"
+        ),
+        "enter_end_date": (
+            "Введите дату окончания курса (ДД.MM.ГГГГ):"
+        ),
+        "end_date_before_start": (
+            "⚠️ Дата окончания не может быть раньше "
+            "даты начала."
+        ),
+        "course_title_exists": (
+            "⚠️ Курс с таким названием уже существует!"
+        ),
         "course_added": "✅ Курс «{title}» добавлен!",
         
         # Редактирование курса
-        "edit_course_title": "✏️ Редактирование курса «{title}»\n\nВведите новое название курса (текущее: {current}):",
+        "edit_course_title": (
+            "✏️ Редактирование курса «{title}»\n\n"
+            "Введите новое название курса (текущее: {current}):"
+        ),
         "edit_course_description": "Введите новое описание курса:",
         "edit_course_price": "Введите новую цену курса:",
-        "edit_course_start_date": "Введите новую дату начала курса (ДД.ММ.ГГГГ):",
-        "edit_course_end_date": "Введите новую дату окончания курса (ДД.ММ.ГГГГ):",
+        "edit_course_start_date": (
+            "Введите новую дату начала курса (ДД.ММ.ГГГГ):"
+        ),
+        "edit_course_end_date": (
+            "Введите новую дату окончания курса (ДД.ММ.ГГГГ):"
+        ),
         
         # Сертификаты - администратор
-        "select_user_for_certificate": "👥 Выберите пользователя для выдачи сертификата:",
+        "select_user_for_certificate": (
+            "👥 Выберите пользователя для выдачи сертификата:"
+        ),
         "enter_certificate_title": "📝 Введите название сертификата:",
-        "certificate_title_too_short": "⚠️ Название сертификата должно содержать минимум 3 символа.",
-        "send_certificate_file": "📄 Отправьте файл сертификата (документ) или нажмите 'Без файла':",
+        "certificate_title_too_short": (
+            "⚠️ Название сертификата должно содержать "
+            "минимум 3 символа."
+        ),
+        "send_certificate_file": (
+            "📄 Отправьте файл сертификата (документ) "
+            "или нажмите 'Без файла':"
+        ),
         "btn_no_file": "✅ Без файла",
-        "certificate_issued": "✅ Сертификат «{title}» выдан пользователю {name}",
-        "certificate_issued_with_file": "✅ Сертификат «{title}» выдан пользователю {name} с файлом",
-        "certificate_notification": "🏅 Поздравляем! Вам выдан сертификат:\n\n<b>{title}</b>",
+        "certificate_issued": (
+            "✅ Сертификат «{title}» выдан пользователю {name}"
+        ),
+        "certificate_issued_with_file": (
+            "✅ Сертификат «{title}» выдан пользователю "
+            "{name} с файлом"
+        ),
+        "certificate_notification": (
+            "🏅 Поздравляем! Вам выдан сертификат:\n\n"
+            "<b>{title}</b>"
+        ),
         "your_certificate_file": "📄 Ваш сертификат",
-        "error_invalid_certificate_data": "⚠️ Ошибка: данные не найдены. Попробуйте снова.",
-        "invalid_price_format": "⚠️ Введите корректную цену (только цифры):",
-        "invalid_certificate_file_format": "⚠️ Отправьте файл как документ или нажмите 'Без файла'",
+        "error_invalid_certificate_data": (
+            "⚠️ Ошибка: данные не найдены. "
+            "Попробуйте снова."
+        ),
+        "invalid_price_format": (
+            "⚠️ Введите корректную цену (только цифры):"
+        ),
+        "invalid_certificate_file_format": (
+            "⚠️ Отправьте файл как документ "
+            "или нажмите 'Без файла'"
+        ),
         
         # Уведомления
-        "course_starts_today": "🚀 Сегодня стартует курс: <b>{title}</b>!\nЖелаем удачи 🎉",
-        "course_ends_today": "📅 Сегодня завершился курс: <b>{title}</b>.\nСпасибо за обучение 🙌",
+        "course_starts_today": (
+            "🚀 Сегодня стартует курс: <b>{title}</b>!\n"
+            "Желаем удачи 🎉"
+        ),
+        "course_ends_today": (
+            "📅 Сегодня завершился курс: <b>{title}</b>.\n"
+            "Спасибо за обучение 🙌"
+        ),
         
         # Общие
         "without_name": "Без имени",
@@ -154,23 +253,36 @@ translations = {
         "btn_language": "🌐 Language",
         
         # Registration
-        "already_registered": "⚠️ You are already registered.\n👤 Name: {name}\n📱 Phone: {phone}",
+        "already_registered": (
+            "⚠️ You are already registered.\n"
+            "👤 Name: {name}\n📱 Phone: {phone}"
+        ),
         "enter_name": "Enter your name:",
         "enter_age": "Enter your age (number):",
-        "invalid_age": "⚠️ Enter a valid age (1–120). Try again.",
+        "invalid_age": (
+            "⚠️ Enter a valid age (1–120). Try again."
+        ),
         "enter_phone": "Enter your phone number:",
         "phone_exists": "⚠️ This number is already registered.",
         "send_photo": "Send your photo (as photo, not file):",
         "send_document": "Send document (PDF or image as file):",
-        "invalid_document": "⚠️ Only PDF or images (JPG/JPEG/PNG) are allowed.",
+        "invalid_document": (
+            "⚠️ Only PDF or images (JPG/JPEG/PNG) are allowed."
+        ),
         "registration_complete": "✅ Registration completed!",
         "user_exists": "⚠️ User already exists.",
-        "new_user_notification": "👤 New user: {name}, Phone: {phone}, TG ID: {user_id}",
+        "new_user_notification": (
+            "👤 New user: {name}, Phone: {phone}, TG ID: {user_id}"
+        ),
         
         # Authorization
         "already_logged_in": "✅ You are already logged in!",
-        "enter_phone_auth": "Enter your phone number (format +99890000xxxx):",
-        "account_already_active": "⚠️ This account is already linked and active.",
+        "enter_phone_auth": (
+            "Enter your phone number (format +99890000xxxx):"
+        ),
+        "account_already_active": (
+            "⚠️ This account is already linked and active."
+        ),
         "login_success": "✅ Login successful!",
         "user_not_found": "⚠️ User not found. Use /register.",
         "logout_success": "🚪 You have logged out.",
@@ -178,7 +290,9 @@ translations = {
         
         # Courses
         "no_courses": "📚 No courses available yet.",
-        "available_courses": "📚 Available courses:\n\nChoose a course:",
+        "available_courses": (
+            "📚 Available courses:\n\nChoose a course:"
+        ),
         "course_not_found": "⚠️ Course not found.",
         "price": "💰 Price: {price} sum.",
         "dates": "📅 Dates: {start} — {end}",
@@ -195,15 +309,21 @@ translations = {
         "unenrolled_success": "🚪 You unsubscribed from the course.",
         
         # My courses
-        "not_registered": "⚠️ You are not registered. Use /register.",
+        "not_registered": (
+            "⚠️ You are not registered. Use /register."
+        ),
         "no_my_courses": "📭 You don't have any courses yet.",
         "no_description": "No description",
         
         # Certificates
         "no_access": "⛔ Access denied.",
         "no_certificates": "📭 No certificates yet.",
-        "no_my_certificates": "📭 You don't have any certificates yet.",
-        "certificate_file_error": "⚠️ Error sending certificate file.",
+        "no_my_certificates": (
+            "📭 You don't have any certificates yet."
+        ),
+        "certificate_file_error": (
+            "⚠️ Error sending certificate file."
+        ),
         "your_certificate": "📄 Your certificate",
         "certificate_file": "📄 Certificate file",
         
@@ -217,7 +337,9 @@ translations = {
         "btn_admin_back": "🔝 Administrator main menu",
         "no_users": "📭 No users yet.",
         "btn_delete": "🗑 Delete",
-        "user_deleted": "🗑 User «{name}» (TG ID: {telegram_id}) deleted.",
+        "user_deleted": (
+            "🗑 User «{name}» (TG ID: {telegram_id}) deleted."
+        ),
         "user_not_found": "⚠️ User not found.",
         "no_users_to_delete": "⚠️ No users to delete.",
         "all_users_deleted": "🗑 All users deleted.",
@@ -228,37 +350,81 @@ translations = {
         "enter_course_title": "➕ Enter new course title:",
         "enter_course_description": "Enter course description:",
         "enter_course_price": "Enter course price (number):",
-        "enter_start_date": "Enter course start date (DD.MM.YYYY):",
-        "invalid_date_format": "⚠️ Invalid date format. Enter again (DD.MM.YYYY):",
+        "enter_start_date": (
+            "Enter course start date (DD.MM.YYYY):"
+        ),
+        "invalid_date_format": (
+            "⚠️ Invalid date format. Enter again (DD.MM.YYYY):"
+        ),
         "enter_end_date": "Enter course end date (DD.MM.YYYY):",
-        "end_date_before_start": "⚠️ End date cannot be earlier than start date.",
-        "course_title_exists": "⚠️ Course with this title already exists!",
+        "end_date_before_start": (
+            "⚠️ End date cannot be earlier than start date."
+        ),
+        "course_title_exists": (
+            "⚠️ Course with this title already exists!"
+        ),
         "course_added": "✅ Course «{title}» added!",
         
         # Course editing
-        "edit_course_title": "✏️ Editing course «{title}»\n\nEnter new course title (current: {current}):",
+        "edit_course_title": (
+            "✏️ Editing course «{title}»\n\n"
+            "Enter new course title (current: {current}):"
+        ),
         "edit_course_description": "Enter new course description:",
         "edit_course_price": "Enter new course price:",
-        "edit_course_start_date": "Enter new course start date (DD.MM.YYYY):",
-        "edit_course_end_date": "Enter new course end date (DD.MM.YYYY):",
+        "edit_course_start_date": (
+            "Enter new course start date (DD.MM.YYYY):"
+        ),
+        "edit_course_end_date": (
+            "Enter new course end date (DD.MM.YYYY):"
+        ),
         
         # Certificates - admin
-        "select_user_for_certificate": "👥 Select user to issue certificate:",
+        "select_user_for_certificate": (
+            "👥 Select user to issue certificate:"
+        ),
         "enter_certificate_title": "📝 Enter certificate title:",
-        "certificate_title_too_short": "⚠️ Certificate title must contain at least 3 characters.",
-        "send_certificate_file": "📄 Send certificate file (document) or click 'Without file':",
+        "certificate_title_too_short": (
+            "⚠️ Certificate title must contain "
+            "at least 3 characters."
+        ),
+        "send_certificate_file": (
+            "📄 Send certificate file (document) "
+            "or click 'Without file':"
+        ),
         "btn_no_file": "✅ Without file",
-        "certificate_issued": "✅ Certificate «{title}» issued to user {name}",
-        "certificate_issued_with_file": "✅ Certificate «{title}» issued to user {name} with file",
-        "certificate_notification": "🏅 Congratulations! You have been issued a certificate:\n\n<b>{title}</b>",
+        "certificate_issued": (
+            "✅ Certificate «{title}» issued to user {name}"
+        ),
+        "certificate_issued_with_file": (
+            "✅ Certificate «{title}» issued to user "
+            "{name} with file"
+        ),
+        "certificate_notification": (
+            "🏅 Congratulations! "
+            "You have been issued a certificate:\n\n"
+            "<b>{title}</b>"
+        ),
         "your_certificate_file": "📄 Your certificate",
-        "error_invalid_certificate_data": "⚠️ Error: data not found. Please try again.",
-        "invalid_price_format": "⚠️ Enter correct price (numbers only):",
-        "invalid_certificate_file_format": "⚠️ Send file as document or click 'Without file'",
+        "error_invalid_certificate_data": (
+            "⚠️ Error: data not found. Please try again."
+        ),
+        "invalid_price_format": (
+            "⚠️ Enter correct price (numbers only):"
+        ),
+        "invalid_certificate_file_format": (
+            "⚠️ Send file as document or click 'Without file'"
+        ),
         
         # Notifications
-        "course_starts_today": "🚀 Course starts today: <b>{title}</b>!\nGood luck 🎉",
-        "course_ends_today": "📅 Course ended today: <b>{title}</b>.\nThank you for studying 🙌",
+        "course_starts_today": (
+            "🚀 Course starts today: <b>{title}</b>!\n"
+            "Good luck 🎉"
+        ),
+        "course_ends_today": (
+            "📅 Course ended today: <b>{title}</b>.\n"
+            "Thank you for studying 🙌"
+        ),
         
         # Common
         "without_name": "Without name",
@@ -287,31 +453,59 @@ translations = {
         "btn_language": "🌐 Til",
         
         # Ro'yxatdan o'tish
-        "already_registered": "⚠️ Siz allaqachon ro'yxatdan o'tgansiz.\n👤 Ism: {name}\n📱 Telefon: {phone}",
+        "already_registered": (
+            "⚠️ Siz allaqachon ro'yxatdan o'tgansiz.\n"
+            "👤 Ism: {name}\n📱 Telefon: {phone}"
+        ),
         "enter_name": "Ismingizni kiriting:",
         "enter_age": "Yoshingizni kiriting (raqamda):",
-        "invalid_age": "⚠️ Haqiqiy yoshni kiriting (1–120). Qayta urinib ko'ring.",
+        "invalid_age": (
+            "⚠️ Haqiqiy yoshni kiriting (1–120). "
+            "Qayta urinib ko'ring."
+        ),
         "enter_phone": "Telefon raqamingizni kiriting:",
-        "phone_exists": "⚠️ Bu raqam allaqachon ro'yxatdan o'tgan.",
-        "send_photo": "Rasmingizni yuboring (rasm sifatida, fayl emas):",
-        "send_document": "Hujjat yuboring (PDF yoki rasm fayl sifatida):",
-        "invalid_document": "⚠️ Faqat PDF yoki rasmlar (JPG/JPEG/PNG) ruxsat etiladi.",
+        "phone_exists": (
+            "⚠️ Bu raqam allaqachon ro'yxatdan o'tgan."
+        ),
+        "send_photo": (
+            "Rasmingizni yuboring (rasm sifatida, fayl emas):"
+        ),
+        "send_document": (
+            "Hujjat yuboring (PDF yoki rasm fayl sifatida):"
+        ),
+        "invalid_document": (
+            "⚠️ Faqat PDF yoki rasmlar (JPG/JPEG/PNG) "
+            "ruxsat etiladi."
+        ),
         "registration_complete": "✅ Ro'yxatdan o'tish yakunlandi!",
         "user_exists": "⚠️ Foydalanuvchi allaqachon mavjud.",
-        "new_user_notification": "👤 Yangi foydalanuvchi: {name}, Telefon: {phone}, TG ID: {user_id}",
+        "new_user_notification": (
+            "👤 Yangi foydalanuvchi: {name}, "
+            "Telefon: {phone}, TG ID: {user_id}"
+        ),
         
         # Avtorizatsiya
         "already_logged_in": "✅ Siz allaqachon tizimga kirdingiz!",
-        "enter_phone_auth": "Telefon raqamingizni kiriting (+99890000xxxx formatida):",
-        "account_already_active": "⚠️ Bu hisob allaqachon bog'langan va faol.",
+        "enter_phone_auth": (
+            "Telefon raqamingizni kiriting "
+            "(+99890000xxxx formatida):"
+        ),
+        "account_already_active": (
+            "⚠️ Bu hisob allaqachon bog'langan va faol."
+        ),
         "login_success": "✅ Kirish muvaffaqiyatli!",
-        "user_not_found": "⚠️ Foydalanuvchi topilmadi. /register dan foydalaning.",
+        "user_not_found": (
+            "⚠️ Foydalanuvchi topilmadi. "
+            "/register dan foydalaning."
+        ),
         "logout_success": "🚪 Siz tizimdan chiqdingiz.",
         "not_authorized": "⚠️ Siz avtorizatsiya qilinmagansiz.",
         
         # Kurslar
         "no_courses": "📚 Hozircha kurslar yo'q.",
-        "available_courses": "📚 Mavjud kurslar:\n\nKurs tanlang:",
+        "available_courses": (
+            "📚 Mavjud kurslar:\n\nKurs tanlang:"
+        ),
         "course_not_found": "⚠️ Kurs topilmadi.",
         "price": "💰 Narx: {price} so'm.",
         "dates": "📅 Sanalar: {start} — {end}",
@@ -321,14 +515,21 @@ translations = {
         "btn_enroll": "✅ Ro'yxatdan o'tish",
         "btn_unenroll": "🚪 Bekor qilish",
         "btn_back": "🔙 Orqaga",
-        "register_first": "⚠️ Avval ro'yxatdan o'ting (/register).",
-        "already_enrolled": "⚠️ Siz allaqachon ro'yxatdan o'tgansiz.",
+        "register_first": (
+            "⚠️ Avval ro'yxatdan o'ting (/register)."
+        ),
+        "already_enrolled": (
+            "⚠️ Siz allaqachon ro'yxatdan o'tgansiz."
+        ),
         "enrolled_success": "✅ Siz «{title}» kursiga yozdingiz!",
         "not_enrolled": "⚠️ Siz bu kursga yozilmagansiz.",
         "unenrolled_success": "🚪 Siz kursdan chiqib ketdingiz.",
         
         # Mening kurslarim
-        "not_registered": "⚠️ Siz ro'yxatdan o'tmagansiz. /register dan foydalaning.",
+        "not_registered": (
+            "⚠️ Siz ro'yxatdan o'tmagansiz. "
+            "/register dan foydalaning."
+        ),
         "no_my_courses": "📭 Sizda hozircha kurslar yo'q.",
         "no_description": "Tavsif yo'q",
         
@@ -336,7 +537,9 @@ translations = {
         "no_access": "⛔ Ruxsat yo'q.",
         "no_certificates": "📭 Hozircha sertifikatlar yo'q.",
         "no_my_certificates": "📭 Sizda hozircha sertifikatlar yo'q.",
-        "certificate_file_error": "⚠️ Sertifikat faylini yuborishda xatolik.",
+        "certificate_file_error": (
+            "⚠️ Sertifikat faylini yuborishda xatolik."
+        ),
         "your_certificate": "📄 Sizning sertifikatingiz",
         "certificate_file": "📄 Sertifikat fayli",
         
@@ -346,52 +549,111 @@ translations = {
         "btn_manage_courses": "📚 Kurslarni boshqarish",
         "btn_add_course": "➕ Kurs qo'shish",
         "btn_add_certificate": "🏅 Sertifikat berish",
-        "btn_delete_all_users": "🗑 Barcha foydalanuvchilarni o'chirish",
+        "btn_delete_all_users": (
+            "🗑 Barcha foydalanuvchilarni o'chirish"
+        ),
         "btn_admin_back": "🔝 Administrator asosiy menyusi",
         "no_users": "📭 Hozircha foydalanuvchilar yo'q.",
         "btn_delete": "🗑 O'chirish",
-        "user_deleted": "🗑 Foydalanuvchi «{name}» (TG ID: {telegram_id}) o'chirildi.",
+        "user_deleted": (
+            "🗑 Foydalanuvchi «{name}» "
+            "(TG ID: {telegram_id}) o'chirildi."
+        ),
         "user_not_found": "⚠️ Foydalanuvchi topilmadi.",
-        "no_users_to_delete": "⚠️ O'chiriladigan foydalanuvchilar yo'q.",
-        "all_users_deleted": "🗑 Barcha foydalanuvchilar o'chirildi.",
+        "no_users_to_delete": (
+            "⚠️ O'chiriladigan foydalanuvchilar yo'q."
+        ),
+        "all_users_deleted": (
+            "🗑 Barcha foydalanuvchilar o'chirildi."
+        ),
         "course_list": "📚 Kurslar ro'yxati:",
         "btn_edit": "✏️ Tahrirlash",
         "course_deleted": "🗑 «{title}» kursi o'chirildi.",
-        "course_updated": "✅ «{title}» kursi muvaffaqiyatli yangilandi!",
+        "course_updated": (
+            "✅ «{title}» kursi muvaffaqiyatli yangilandi!"
+        ),
         "enter_course_title": "➕ Yangi kurs nomini kiriting:",
         "enter_course_description": "Kurs tavsifini kiriting:",
         "enter_course_price": "Kurs narxini kiriting (raqam):",
-        "enter_start_date": "Kurs boshlanish sanasini kiriting (KK.OO.YYYY):",
-        "invalid_date_format": "⚠️ Noto'g'ri sana formati. Qayta kiriting (KK.OO.YYYY):",
-        "enter_end_date": "Kurs tugash sanasini kiriting (KK.OO.YYYY):",
-        "end_date_before_start": "⚠️ Tugash sanasi boshlanish sanasidan oldin bo'la olmaydi.",
-        "course_title_exists": "⚠️ Bunday nomli kurs allaqachon mavjud!",
+        "enter_start_date": (
+            "Kurs boshlanish sanasini kiriting (KK.OO.YYYY):"
+        ),
+        "invalid_date_format": (
+            "⚠️ Noto'g'ri sana formati. "
+            "Qayta kiriting (KK.OO.YYYY):"
+        ),
+        "enter_end_date": (
+            "Kurs tugash sanasini kiriting (KK.OO.YYYY):"
+        ),
+        "end_date_before_start": (
+            "⚠️ Tugash sanasi boshlanish sanasidan "
+            "oldin bo'la olmaydi."
+        ),
+        "course_title_exists": (
+            "⚠️ Bunday nomli kurs allaqachon mavjud!"
+        ),
         "course_added": "✅ «{title}» kursi qo'shildi!",
         
         # Kursni tahrirlash
-        "edit_course_title": "✏️ «{title}» kursini tahrirlash\n\nYangi kurs nomini kiriting (hozirgi: {current}):",
+        "edit_course_title": (
+            "✏️ «{title}» kursini tahrirlash\n\n"
+            "Yangi kurs nomini kiriting (hozirgi: {current}):"
+        ),
         "edit_course_description": "Yangi kurs tavsifini kiriting:",
         "edit_course_price": "Yangi kurs narxini kiriting:",
-        "edit_course_start_date": "Yangi boshlanish sanasini kiriting (KK.OO.YYYY):",
-        "edit_course_end_date": "Yangi tugash sanasini kiriting (KK.OO.YYYY):",
+        "edit_course_start_date": (
+            "Yangi boshlanish sanasini kiriting (KK.OO.YYYY):"
+        ),
+        "edit_course_end_date": (
+            "Yangi tugash sanasini kiriting (KK.OO.YYYY):"
+        ),
         
         # Sertifikatlar - administrator
-        "select_user_for_certificate": "👥 Sertifikat berish uchun foydalanuvchini tanlang:",
+        "select_user_for_certificate": (
+            "👥 Sertifikat berish uchun foydalanuvchini tanlang:"
+        ),
         "enter_certificate_title": "📝 Sertifikat nomini kiriting:",
-        "certificate_title_too_short": "⚠️ Sertifikat nomi kamida 3 ta belgi bo'lishi kerak.",
-        "send_certificate_file": "📄 Sertifikat faylini yuboring (hujjat) yoki 'Faylsiz' tugmasini bosing:",
+        "certificate_title_too_short": (
+            "⚠️ Sertifikat nomi kamida 3 ta belgi bo'lishi kerak."
+        ),
+        "send_certificate_file": (
+            "📄 Sertifikat faylini yuboring (hujjat) "
+            "yoki 'Faylsiz' tugmasini bosing:"
+        ),
         "btn_no_file": "✅ Faylsiz",
-        "certificate_issued": "✅ «{title}» sertifikati {name} foydalanuvchiga berildi",
-        "certificate_issued_with_file": "✅ «{title}» sertifikati {name} foydalanuvchiga fayl bilan berildi",
-        "certificate_notification": "🏅 Tabriklaymiz! Sizga sertifikat berildi:\n\n<b>{title}</b>",
+        "certificate_issued": (
+            "✅ «{title}» sertifikati {name} "
+            "foydalanuvchiga berildi"
+        ),
+        "certificate_issued_with_file": (
+            "✅ «{title}» sertifikati {name} "
+            "foydalanuvchiga fayl bilan berildi"
+        ),
+        "certificate_notification": (
+            "🏅 Tabriklaymiz! Sizga sertifikat berildi:\n\n"
+            "<b>{title}</b>"
+        ),
         "your_certificate_file": "📄 Sizning sertifikatingiz",
-        "error_invalid_certificate_data": "⚠️ Xato: ma'lumot topilmadi. Qayta urinib ko'ring.",
-        "invalid_price_format": "⚠️ To'g'ri narxni kiriting (faqat raqamlar):",
-        "invalid_certificate_file_format": "⚠️ Faylni hujjat sifatida yuboring yoki 'Faylsiz' tugmasini bosing",
+        "error_invalid_certificate_data": (
+            "⚠️ Xato: ma'lumot topilmadi. Qayta urinib ko'ring."
+        ),
+        "invalid_price_format": (
+            "⚠️ To'g'ri narxni kiriting (faqat raqamlar):"
+        ),
+        "invalid_certificate_file_format": (
+            "⚠️ Faylni hujjat sifatida yuboring "
+            "yoki 'Faylsiz' tugmasini bosing"
+        ),
         
         # Bildirishnomalar
-        "course_starts_today": "🚀 Bugun kurs boshlanadi: <b>{title}</b>!\nOmad yor bo'lsin 🎉",
-        "course_ends_today": "📅 Bugun kurs tugadi: <b>{title}</b>.\nO'qiganingiz uchun rahmat 🙌",
+        "course_starts_today": (
+            "🚀 Bugun kurs boshlanadi: <b>{title}</b>!\n"
+            "Omad yor bo'lsin 🎉"
+        ),
+        "course_ends_today": (
+            "📅 Bugun kurs tugadi: <b>{title}</b>.\n"
+            "O'qiganingiz uchun rahmat 🙌"
+        ),
         
         # Umumiy
         "without_name": "Ismsiz",
@@ -402,14 +664,33 @@ translations = {
     }
 }
 
-def get_text(key: str, lang: str = "ru", **kwargs) -> str:
+# Доступные языки
+AVAILABLE_LANGUAGES = {
+    "ru": "🇷🇺 Русский",
+    "en": "🇺🇸 English",
+    "uz": "🇺🇿 O'zbek"
+}
+
+
+def get_text(key: str, lang: str = "ru", **kwargs: Any) -> str:
     """
-    Получить локализованный текст
+    Получить локализованный текст.
+    
+    Args:
+        key: Ключ перевода
+        lang: Код языка (ru/en/uz)
+        **kwargs: Параметры для форматирования строки
+        
+    Returns:
+        Локализованная строка с подставленными параметрами
     """
-    if lang not in translations:
+    if lang not in TRANSLATIONS:
         lang = "ru"
     
-    text = translations[lang].get(key, translations["ru"].get(key, key))
+    text = TRANSLATIONS[lang].get(
+        key,
+        TRANSLATIONS["ru"].get(key, key)
+    )
     
     if kwargs:
         try:
@@ -419,18 +700,20 @@ def get_text(key: str, lang: str = "ru", **kwargs) -> str:
     
     return text
 
+
 def get_user_language(user_id: int) -> str:
     """
-    Получить язык пользователя (по умолчанию русский)
-    В реальном проекте можно хранить в БД
+    Получить язык пользователя (по умолчанию русский).
+    
+    В реальном проекте можно хранить в БД.
+    
+    Args:
+        user_id: ID пользователя
+        
+    Returns:
+        Код языка по умолчанию 'ru'
     """
     # Пока что возвращаем русский по умолчанию
     # В будущем можно добавить таблицу user_settings в БД
     return "ru"
-
-# Доступные языки
-AVAILABLE_LANGUAGES = {
-    "ru": "🇷🇺 Русский",
-    "en": "🇺🇸 English", 
-    "uz": "🇺🇿 O'zbek"
-}
+        
