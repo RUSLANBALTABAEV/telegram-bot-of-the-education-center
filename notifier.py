@@ -1,3 +1,4 @@
+# ============ notifier.py ============
 """
 Модуль планировщика уведомлений о начале и окончании курсов.
 Использует APScheduler для отправки уведомлений пользователям.
@@ -19,12 +20,12 @@ scheduler = AsyncIOScheduler(timezone="Asia/Tashkent")
 async def notify_start_course() -> None:
     """
     Уведомить пользователей о начале курсов сегодня.
-    
+
     Проверяет все записи, где start_date равна сегодняшней дате,
     и отправляет уведомления соответствующим пользователям.
     """
     today = datetime.now(scheduler.timezone).date()
-    
+
     async with async_session() as session:
         result = await session.execute(
             select(Enrollment, Course, User)
@@ -33,7 +34,7 @@ async def notify_start_course() -> None:
             .where(Enrollment.start_date == today)
         )
         rows = result.all()
-        
+
         for enr, course, user in rows:
             if user and user.user_id:
                 try:
@@ -55,12 +56,12 @@ async def notify_start_course() -> None:
 async def notify_end_course() -> None:
     """
     Уведомить пользователей об окончании курсов сегодня.
-    
+
     Проверяет все записи, где end_date равна сегодняшней дате,
     и отправляет уведомления соответствующим пользователям.
     """
     today = datetime.now(scheduler.timezone).date()
-    
+
     async with async_session() as session:
         result = await session.execute(
             select(Enrollment, Course, User)
@@ -69,7 +70,7 @@ async def notify_end_course() -> None:
             .where(Enrollment.end_date == today)
         )
         rows = result.all()
-        
+
         for enr, course, user in rows:
             if user and user.user_id:
                 try:
@@ -91,7 +92,7 @@ async def notify_end_course() -> None:
 def setup_scheduler() -> None:
     """
     Настроить и запустить планировщик уведомлений.
-    
+
     Добавляет задачи на уведомление о начале и окончании курсов.
     Уведомления отправляются каждый день в 9:00.
     """
