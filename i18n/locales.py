@@ -17,7 +17,7 @@ TRANSLATIONS = {
         ),
         "choose_language": "🌐 Выберите язык:",
         "language_changed": "✅ Язык изменен на русский",
-        
+
         # Кнопки главного меню
         "btn_start": "Старт",
         "btn_registration": "Регистрация",
@@ -29,7 +29,7 @@ TRANSLATIONS = {
         "btn_admin_panel": "Управление курсами и пользователями",
         "btn_logout": "Выход",
         "btn_language": "🌐 Язык",
-        
+
         # Регистрация
         "already_registered": (
             "⚠️ Вы уже зарегистрированы.\n"
@@ -62,7 +62,7 @@ TRANSLATIONS = {
             "👤 Новый пользователь: {name}, "
             "Телефон: {phone}, TG ID: {user_id}"
         ),
-        
+
         # Авторизация
         "already_logged_in": "✅ Вы уже вошли в систему!",
         "enter_phone_auth": (
@@ -79,7 +79,7 @@ TRANSLATIONS = {
         ),
         "logout_success": "🚪 Вы вышли из системы.",
         "not_authorized": "⚠️ Вы не авторизованы.",
-        
+
         # Курсы
         "no_courses": "📚 Курсов пока нет.",
         "available_courses": (
@@ -102,7 +102,7 @@ TRANSLATIONS = {
         "enrolled_success": "✅ Вы записались на курс «{title}»!",
         "not_enrolled": "⚠️ Вы не записаны на этот курс.",
         "unenrolled_success": "🚪 Вы отписались от курса.",
-        
+
         # Мои курсы
         "not_registered": (
             "⚠️ Вы не зарегистрированы. "
@@ -110,7 +110,7 @@ TRANSLATIONS = {
         ),
         "no_my_courses": "📭 У вас пока нет курсов.",
         "no_description": "Без описания",
-        
+
         # Сертификаты
         "no_access": "⛔ Нет доступа.",
         "no_certificates": "📭 Сертификатов пока нет.",
@@ -120,7 +120,7 @@ TRANSLATIONS = {
         ),
         "your_certificate": "📄 Ваш сертификат",
         "certificate_file": "📄 Файл сертификата",
-        
+
         # Администратор
         "admin_main_menu": "👤 Главное меню администратора:",
         "btn_show_users": "👥 Список пользователей",
@@ -163,7 +163,7 @@ TRANSLATIONS = {
             "⚠️ Курс с таким названием уже существует!"
         ),
         "course_added": "✅ Курс «{title}» добавлен!",
-        
+
         # Редактирование курса
         "edit_course_title": (
             "✏️ Редактирование курса «{title}»\n\n"
@@ -177,7 +177,7 @@ TRANSLATIONS = {
         "edit_course_end_date": (
             "Введите новую дату окончания курса (ДД.ММ.ГГГГ):"
         ),
-        
+
         # Сертификаты - администратор
         "select_user_for_certificate": (
             "👥 Выберите пользователя для выдачи сертификата:"
@@ -215,7 +215,7 @@ TRANSLATIONS = {
             "⚠️ Отправьте файл как документ "
             "или нажмите 'Без файла'"
         ),
-        
+
         # Уведомления
         "course_starts_today": (
             "🚀 Сегодня стартует курс: <b>{title}</b>!\n"
@@ -225,7 +225,7 @@ TRANSLATIONS = {
             "📅 Сегодня завершился курс: <b>{title}</b>.\n"
             "Спасибо за обучение 🙌"
         ),
-        
+
         # Общие
         "without_name": "Без имени",
         "not_specified": "не указан",
@@ -233,13 +233,13 @@ TRANSLATIONS = {
         "unknown": "неизвестный",
         "user": "👤 Пользователь: {name}",
     },
-    
+
     "en": {
         # Start messages
         "welcome": "👋 Hello! Welcome!\nChoose an action:",
         "choose_language": "🌐 Choose language:",
         "language_changed": "✅ Language changed to English",
-        
+
         # Main menu buttons
         "btn_start": "Start",
         "btn_registration": "Registration",
@@ -251,7 +251,7 @@ TRANSLATIONS = {
         "btn_admin_panel": "Manage Courses and Users",
         "btn_logout": "Logout",
         "btn_language": "🌐 Language",
-        
+
         # Registration
         "already_registered": (
             "⚠️ You are already registered.\n"
@@ -274,7 +274,7 @@ TRANSLATIONS = {
         "new_user_notification": (
             "👤 New user: {name}, Phone: {phone}, TG ID: {user_id}"
         ),
-        
+
         # Authorization
         "already_logged_in": "✅ You are already logged in!",
         "enter_phone_auth": (
@@ -287,7 +287,7 @@ TRANSLATIONS = {
         "user_not_found": "⚠️ User not found. Use /register.",
         "logout_success": "🚪 You have logged out.",
         "not_authorized": "⚠️ You are not authorized.",
-        
+
         # Courses
         "no_courses": "📚 No courses available yet.",
         "available_courses": (
@@ -307,14 +307,14 @@ TRANSLATIONS = {
         "enrolled_success": "✅ You enrolled in course «{title}»!",
         "not_enrolled": "⚠️ You are not enrolled in this course.",
         "unenrolled_success": "🚪 You unsubscribed from the course.",
-        
+
         # My courses
         "not_registered": (
             "⚠️ You are not registered. Use /register."
         ),
         "no_my_courses": "📭 You don't have any courses yet.",
         "no_description": "No description",
-        
+
         # Certificates
         "no_access": "⛔ Access denied.",
         "no_certificates": "📭 No certificates yet.",
@@ -326,7 +326,7 @@ TRANSLATIONS = {
         ),
         "your_certificate": "📄 Your certificate",
         "certificate_file": "📄 Certificate file",
-        
+
         # Admin
         "admin_main_menu": "👤 Administrator main menu:",
         "btn_show_users": "👥 Users list",
@@ -364,7 +364,7 @@ TRANSLATIONS = {
             "⚠️ Course with this title already exists!"
         ),
         "course_added": "✅ Course «{title}» added!",
-        
+
         # Course editing
         "edit_course_title": (
             "✏️ Editing course «{title}»\n\n"
@@ -378,7 +378,7 @@ TRANSLATIONS = {
         "edit_course_end_date": (
             "Enter new course end date (DD.MM.YYYY):"
         ),
-        
+
         # Certificates - admin
         "select_user_for_certificate": (
             "👥 Select user to issue certificate:"
@@ -415,7 +415,7 @@ TRANSLATIONS = {
         "invalid_certificate_file_format": (
             "⚠️ Send file as document or click 'Without file'"
         ),
-        
+
         # Notifications
         "course_starts_today": (
             "🚀 Course starts today: <b>{title}</b>!\n"
@@ -425,7 +425,7 @@ TRANSLATIONS = {
             "📅 Course ended today: <b>{title}</b>.\n"
             "Thank you for studying 🙌"
         ),
-        
+
         # Common
         "without_name": "Without name",
         "not_specified": "not specified",
@@ -433,13 +433,13 @@ TRANSLATIONS = {
         "unknown": "unknown",
         "user": "👤 User: {name}",
     },
-    
+
     "uz": {
         # Boshlash xabarlari
         "welcome": "👋 Salom! Xush kelibsiz!\nAmalni tanlang:",
         "choose_language": "🌐 Tilni tanlang:",
         "language_changed": "✅ Til o'zbek tiliga o'zgartirildi",
-        
+
         # Asosiy menyu tugmalari
         "btn_start": "Boshlash",
         "btn_registration": "Ro'yxatdan o'tish",
@@ -451,7 +451,7 @@ TRANSLATIONS = {
         "btn_admin_panel": "Kurs va foydalanuvchilarni boshqarish",
         "btn_logout": "Chiqish",
         "btn_language": "🌐 Til",
-        
+
         # Ro'yxatdan o'tish
         "already_registered": (
             "⚠️ Siz allaqachon ro'yxatdan o'tgansiz.\n"
@@ -483,7 +483,7 @@ TRANSLATIONS = {
             "👤 Yangi foydalanuvchi: {name}, "
             "Telefon: {phone}, TG ID: {user_id}"
         ),
-        
+
         # Avtorizatsiya
         "already_logged_in": "✅ Siz allaqachon tizimga kirdingiz!",
         "enter_phone_auth": (
@@ -500,7 +500,7 @@ TRANSLATIONS = {
         ),
         "logout_success": "🚪 Siz tizimdan chiqdingiz.",
         "not_authorized": "⚠️ Siz avtorizatsiya qilinmagansiz.",
-        
+
         # Kurslar
         "no_courses": "📚 Hozircha kurslar yo'q.",
         "available_courses": (
@@ -524,7 +524,7 @@ TRANSLATIONS = {
         "enrolled_success": "✅ Siz «{title}» kursiga yozdingiz!",
         "not_enrolled": "⚠️ Siz bu kursga yozilmagansiz.",
         "unenrolled_success": "🚪 Siz kursdan chiqib ketdingiz.",
-        
+
         # Mening kurslarim
         "not_registered": (
             "⚠️ Siz ro'yxatdan o'tmagansiz. "
@@ -532,7 +532,7 @@ TRANSLATIONS = {
         ),
         "no_my_courses": "📭 Sizda hozircha kurslar yo'q.",
         "no_description": "Tavsif yo'q",
-        
+
         # Sertifikatlar
         "no_access": "⛔ Ruxsat yo'q.",
         "no_certificates": "📭 Hozircha sertifikatlar yo'q.",
@@ -542,7 +542,7 @@ TRANSLATIONS = {
         ),
         "your_certificate": "📄 Sizning sertifikatingiz",
         "certificate_file": "📄 Sertifikat fayli",
-        
+
         # Administrator
         "admin_main_menu": "👤 Administrator asosiy menyusi:",
         "btn_show_users": "👥 Foydalanuvchilar ro'yxati",
@@ -593,7 +593,7 @@ TRANSLATIONS = {
             "⚠️ Bunday nomli kurs allaqachon mavjud!"
         ),
         "course_added": "✅ «{title}» kursi qo'shildi!",
-        
+
         # Kursni tahrirlash
         "edit_course_title": (
             "✏️ «{title}» kursini tahrirlash\n\n"
@@ -607,7 +607,7 @@ TRANSLATIONS = {
         "edit_course_end_date": (
             "Yangi tugash sanasini kiriting (KK.OO.YYYY):"
         ),
-        
+
         # Sertifikatlar - administrator
         "select_user_for_certificate": (
             "👥 Sertifikat berish uchun foydalanuvchini tanlang:"
@@ -644,7 +644,7 @@ TRANSLATIONS = {
             "⚠️ Faylni hujjat sifatida yuboring "
             "yoki 'Faylsiz' tugmasini bosing"
         ),
-        
+
         # Bildirishnomalar
         "course_starts_today": (
             "🚀 Bugun kurs boshlanadi: <b>{title}</b>!\n"
@@ -654,7 +654,7 @@ TRANSLATIONS = {
             "📅 Bugun kurs tugadi: <b>{title}</b>.\n"
             "O'qiganingiz uchun rahmat 🙌"
         ),
-        
+
         # Umumiy
         "without_name": "Ismsiz",
         "not_specified": "ko'rsatilmagan",
@@ -675,45 +675,44 @@ AVAILABLE_LANGUAGES = {
 def get_text(key: str, lang: str = "ru", **kwargs: Any) -> str:
     """
     Получить локализованный текст.
-    
+
     Args:
         key: Ключ перевода
         lang: Код языка (ru/en/uz)
         **kwargs: Параметры для форматирования строки
-        
+
     Returns:
         Локализованная строка с подставленными параметрами
     """
     if lang not in TRANSLATIONS:
         lang = "ru"
-    
+
     text = TRANSLATIONS[lang].get(
         key,
         TRANSLATIONS["ru"].get(key, key)
     )
-    
+
     if kwargs:
         try:
             return text.format(**kwargs)
         except (KeyError, ValueError):
             return text
-    
+
     return text
 
 
 def get_user_language(user_id: int) -> str:
     """
     Получить язык пользователя (по умолчанию русский).
-    
+
     В реальном проекте можно хранить в БД.
-    
+
     Args:
         user_id: ID пользователя
-        
+
     Returns:
         Код языка по умолчанию 'ru'
     """
     # Пока что возвращаем русский по умолчанию
     # В будущем можно добавить таблицу user_settings в БД
     return "ru"
-        

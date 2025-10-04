@@ -26,10 +26,10 @@ registration_router = Router()
 async def get_user_language(user_id: int) -> str:
     """
     Получить язык пользователя из БД.
-    
+
     Args:
         user_id: Telegram ID пользователя
-        
+
     Returns:
         Код языка (ru/en/uz), по умолчанию 'ru'
     """
@@ -51,13 +51,13 @@ async def start_registration(
 ) -> None:
     """
     Начать процесс регистрации.
-    
+
     Args:
         message: Входящее сообщение
         state: FSM контекст
     """
     lang = await get_user_language(message.from_user.id)
-    
+
     async with async_session() as session:
         result = await session.execute(
             select(User).where(User.user_id == message.from_user.id)
@@ -87,7 +87,7 @@ async def start_registration(
 async def process_name(message: types.Message, state: FSMContext) -> None:
     """
     Обработать введённое имя.
-    
+
     Args:
         message: Сообщение с именем
         state: FSM контекст
@@ -102,18 +102,18 @@ async def process_name(message: types.Message, state: FSMContext) -> None:
 async def process_age(message: types.Message, state: FSMContext) -> None:
     """
     Обработать введённый возраст.
-    
+
     Args:
         message: Сообщение с возрастом
         state: FSM контекст
     """
     lang = await get_user_language(message.from_user.id)
     age = int(message.text)
-    
+
     if not (MIN_AGE <= age <= MAX_AGE):
         await message.answer(get_text("invalid_age", lang))
         return
-    
+
     await state.update_data(age=age)
     await message.answer(get_text("enter_phone", lang))
     await state.set_state(Registration.phone)
@@ -126,14 +126,14 @@ async def process_age(message: types.Message, state: FSMContext) -> None:
 async def process_phone(message: types.Message, state: FSMContext) -> None:
     """
     Обработать введённый номер телефона.
-    
+
     Args:
         message: Сообщение с номером телефона
         state: FSM контекст
     """
     lang = await get_user_language(message.from_user.id)
     phone = message.text.strip()
-    
+
     async with async_session() as session:
         result = await session.execute(
             select(User).where(User.phone == phone)
@@ -154,7 +154,7 @@ async def process_phone(message: types.Message, state: FSMContext) -> None:
 async def process_photo(message: types.Message, state: FSMContext) -> None:
     """
     Обработать отправленное фото.
-    
+
     Args:
         message: Сообщение с фото
         state: FSM контекст
@@ -175,7 +175,7 @@ async def process_document(
 ) -> None:
     """
     Обработать отправленный документ и завершить регистрацию.
-    
+
     Args:
         message: Сообщение с документом
         state: FSM контекст
@@ -183,8 +183,9 @@ async def process_document(
     lang = await get_user_language(message.from_user.id)
     bot = message.bot
     mime = message.document.mime_type or ""
-    
-    if not (mime.startswith("application/pdf") or mime.startswith("image/")):
+
+    if not (mime.startswith("application/pdf") or
+            mime.startswith("image/")):
         await message.answer(get_text("invalid_document", lang))
         return
 
@@ -197,7 +198,7 @@ async def process_document(
             select(User).where(User.user_id == message.from_user.id)
         )
         existing_user = result.scalar_one_or_none()
-        
+
         if existing_user:
             # Обновляем существующего пользователя
             existing_user.name = data["name"]
@@ -236,7 +237,7 @@ async def process_document(
         phone=new_user.phone,
         user_id=new_user.user_id
     )
-    
+
     try:
         await bot.send_message(ADMIN_ID, notify_text)
         if new_user.photo:

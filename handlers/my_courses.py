@@ -1,3 +1,4 @@
+# ============ handlers/my_courses.py ============
 """
 Обработчики для просмотра курсов пользователя.
 """
@@ -17,10 +18,10 @@ my_courses_router = Router()
 async def get_user_language(user_id: int) -> str:
     """
     Получить язык пользователя из БД.
-    
+
     Args:
         user_id: Telegram ID пользователя
-        
+
     Returns:
         Код языка (ru/en/uz), по умолчанию 'ru'
     """
@@ -39,12 +40,12 @@ async def get_user_language(user_id: int) -> str:
 async def show_my_courses(message: types.Message) -> None:
     """
     Показать курсы, на которые записан пользователь.
-    
+
     Args:
         message: Входящее сообщение
     """
     lang = await get_user_language(message.from_user.id)
-    
+
     async with async_session() as session:
         result_user = await session.execute(
             select(User).where(User.user_id == message.from_user.id)
@@ -68,7 +69,7 @@ async def show_my_courses(message: types.Message) -> None:
 
     for enr in enrollments:
         course = enr.course
-        
+
         if enr.is_completed:
             status = get_text("status_completed", lang)
         else:
@@ -78,7 +79,7 @@ async def show_my_courses(message: types.Message) -> None:
                 else get_text("not_indicated", lang)
             )
             status = get_text("status_until", lang, date=end_date_str)
-            
+
         text = (
             f"📘 <b>{course.title}</b>\n\n"
             f"{course.description or get_text('no_description', lang)}\n\n"

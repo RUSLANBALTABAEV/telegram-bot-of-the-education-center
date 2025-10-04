@@ -1,3 +1,4 @@
+# ============ handlers/courses.py ============
 """
 Обработчики для просмотра курсов и записи на них.
 """
@@ -24,10 +25,10 @@ courses_router = Router()
 async def get_user_language(user_id: int) -> str:
     """
     Получить язык пользователя из БД.
-    
+
     Args:
         user_id: Telegram ID пользователя
-        
+
     Returns:
         Код языка (ru/en/uz), по умолчанию 'ru'
     """
@@ -44,10 +45,10 @@ async def build_courses_message(
 ) -> tuple[str, InlineKeyboardMarkup | None]:
     """
     Построить сообщение со списком курсов.
-    
+
     Args:
         lang: Код языка интерфейса
-        
+
     Returns:
         Кортеж (текст сообщения, клавиатура)
     """
@@ -78,13 +79,13 @@ async def build_courses_message(
 async def show_courses(message: Message) -> None:
     """
     Показать список доступных курсов.
-    
+
     Args:
         message: Входящее сообщение
     """
     lang = await get_user_language(message.from_user.id)
     text, keyboard = await build_courses_message(lang)
-    
+
     if not keyboard:
         await message.answer(text)
     else:
@@ -95,7 +96,7 @@ async def show_courses(message: Message) -> None:
 async def show_course_info(callback: CallbackQuery) -> None:
     """
     Показать информацию о конкретном курсе.
-    
+
     Args:
         callback: Callback query с ID курса
     """
@@ -140,7 +141,7 @@ async def show_course_info(callback: CallbackQuery) -> None:
         if course.end_date
         else get_text("not_indicated", lang)
     )
-    
+
     text = (
         f"📘 <b>{course.title}</b>\n\n"
         f"{course.description}\n\n"
@@ -159,7 +160,7 @@ async def show_course_info(callback: CallbackQuery) -> None:
                 else get_text("not_indicated", lang)
             )
             status = get_text("status_until", lang, date=end_date_display)
-        
+
         text += f"\n\n{get_text('status', lang, status=status)}"
         action_button = InlineKeyboardButton(
             text=get_text("btn_unenroll", lang),
@@ -193,20 +194,20 @@ async def show_course_info(callback: CallbackQuery) -> None:
 async def enroll_course(callback: CallbackQuery) -> None:
     """
     Записать пользователя на курс.
-    
+
     Args:
         callback: Callback query с ID курса
     """
     lang = await get_user_language(callback.from_user.id)
     course_id = int(callback.data.split(":")[1])
-    
+
     async with async_session() as session:
         # Проверка пользователя
         result = await session.execute(
             select(User).where(User.user_id == callback.from_user.id)
         )
         user = result.scalar_one_or_none()
-        
+
         if not user:
             await callback.answer(
                 get_text("register_first", lang),
@@ -257,19 +258,19 @@ async def enroll_course(callback: CallbackQuery) -> None:
 async def unenroll_course(callback: CallbackQuery) -> None:
     """
     Отписать пользователя от курса.
-    
+
     Args:
         callback: Callback query с ID курса
     """
     lang = await get_user_language(callback.from_user.id)
     course_id = int(callback.data.split(":")[1])
-    
+
     async with async_session() as session:
         result = await session.execute(
             select(User).where(User.user_id == callback.from_user.id)
         )
         user = result.scalar_one_or_none()
-        
+
         if not user:
             await callback.answer(
                 get_text("register_first", lang),
@@ -284,7 +285,7 @@ async def unenroll_course(callback: CallbackQuery) -> None:
             )
         )
         enrollment = enrollment_q.scalar_one_or_none()
-        
+
         if not enrollment:
             await callback.answer(
                 get_text("not_enrolled", lang),
@@ -302,16 +303,16 @@ async def unenroll_course(callback: CallbackQuery) -> None:
 async def back_to_courses(callback: CallbackQuery) -> None:
     """
     Вернуться к списку курсов.
-    
+
     Args:
         callback: Callback query
     """
     lang = await get_user_language(callback.from_user.id)
     text, keyboard = await build_courses_message(lang)
-    
+
     if not keyboard:
         await callback.message.edit_text(text)
     else:
         await callback.message.edit_text(text, reply_markup=keyboard)
-    
+
     await callback.answer()

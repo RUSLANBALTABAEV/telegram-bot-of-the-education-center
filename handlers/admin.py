@@ -15,7 +15,6 @@ from aiogram.enums import ContentType
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 
 from db.models import User, Course, Certificate
 from db.session import async_session
@@ -29,10 +28,10 @@ admin_router = Router()
 async def get_user_language(user_id: int) -> str:
     """
     Получить язык пользователя из БД.
-    
+
     Args:
         user_id: Telegram ID пользователя
-        
+
     Returns:
         Код языка (ru/en/uz), по умолчанию 'ru'
     """
@@ -47,6 +46,7 @@ async def get_user_language(user_id: int) -> str:
 # ============ FSM классы ============
 class AddCourseFSM(StatesGroup):
     """Состояния для добавления курса."""
+
     title = State()
     description = State()
     price = State()
@@ -56,6 +56,7 @@ class AddCourseFSM(StatesGroup):
 
 class EditCourseFSM(StatesGroup):
     """Состояния для редактирования курса."""
+
     course_id = State()
     title = State()
     description = State()
@@ -66,6 +67,7 @@ class EditCourseFSM(StatesGroup):
 
 class CertificateFSM(StatesGroup):
     """Состояния для выдачи сертификата."""
+
     user_selector = State()
     title = State()
     file = State()
@@ -82,7 +84,7 @@ class CertificateFSM(StatesGroup):
 async def admin_main_menu(message: Message) -> None:
     """
     Показать главное меню администратора.
-    
+
     Args:
         message: Входящее сообщение
     """
@@ -90,7 +92,7 @@ async def admin_main_menu(message: Message) -> None:
         lang = await get_user_language(message.from_user.id)
         await message.answer(get_text("no_access", lang))
         return
-    
+
     lang = await get_user_language(message.from_user.id)
     await message.answer(
         get_text("admin_main_menu", lang),
@@ -105,20 +107,20 @@ async def back_to_admin_menu(
 ) -> None:
     """
     Вернуться в главное меню администратора.
-    
+
     Args:
         callback: Callback query
         state: FSM контекст
     """
     await state.clear()
-    
+
     if callback.from_user.id != ADMIN_ID:
         lang = await get_user_language(callback.from_user.id)
         await callback.answer(get_text("no_access", lang), show_alert=True)
         return
-    
+
     lang = await get_user_language(callback.from_user.id)
-    
+
     try:
         await callback.message.edit_text(
             get_text("admin_main_menu", lang),
@@ -129,7 +131,7 @@ async def back_to_admin_menu(
             get_text("admin_main_menu", lang),
             reply_markup=admin_main_keyboard(lang)
         )
-    
+
     await callback.answer()
 
 
@@ -138,7 +140,7 @@ async def back_to_admin_menu(
 async def show_users(callback: CallbackQuery) -> None:
     """
     Показать список всех пользователей.
-    
+
     Args:
         callback: Callback query
     """
@@ -148,7 +150,7 @@ async def show_users(callback: CallbackQuery) -> None:
         return
 
     lang = await get_user_language(callback.from_user.id)
-    
+
     async with async_session() as session:
         result = await session.execute(select(User))
         users = result.scalars().all()
@@ -176,7 +178,7 @@ async def show_users(callback: CallbackQuery) -> None:
             f"🗄 DB ID: {user.id}\n"
             f"📱 {phone}"
         )
-        
+
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [
@@ -215,7 +217,7 @@ async def show_users(callback: CallbackQuery) -> None:
 async def delete_user(callback: CallbackQuery) -> None:
     """
     Удалить пользователя.
-    
+
     Args:
         callback: Callback query с ID пользователя
     """
@@ -270,7 +272,7 @@ async def delete_user(callback: CallbackQuery) -> None:
 async def delete_all_users(callback: CallbackQuery) -> None:
     """
     Удалить всех пользователей.
-    
+
     Args:
         callback: Callback query
     """
@@ -310,6 +312,316 @@ async def delete_all_users(callback: CallbackQuery) -> None:
 
     await callback.answer()
 
+
+# ============ Управление курсами ============
+@admin_router.callback_query(F.data == "manage_courses")
+async def manage_courses(callback: CallbackQuery) -> None:
+    """
+    Показать список всех курсов для управления.
+
+    Args:
+        callback: Callback query
+    """
+    if callback.from_user.id != ADMIN_ID:
+        lang = await get_user_language(callback.from_user.id)
+        await callback.answer(get_text("no_access", lang), show_alert=True)
+        return
+
+    lang = await get_user_language(callback.from_user.id)
+
+    async with async_session() as session:
+        result = await session.execute(select(Course))
+        courses = result.scalars().all()
+
+    if not courses:
+        try:
+            await callback.message.edit_text(
+                get_text("no_courses", lang),
+                reply_markup=admin_back_keyboard(lang)
+            )
+        except Exception:
+            await callback.message.answer(
+                get_text("no_courses", lang),
+                reply_markup=admin_back_keyboard(lang)
+            )
+        await callback.answer()
+        return
+
+    for course in courses:
+        start_date = (
+            course.start_date.strftime("%d.%m.%Y")
+            if course.start_date
+            else get_text("not_indicated", lang)
+        )
+        end_date = (
+            course.end_date.strftime("%d.%m.%Y")
+            if course.end_date
+            else get_text("not_indicated", lang)
+        )
+
+        text = (
+            f"📘 <b>{course.title}</b>\n\n"
+            f"{course.description or get_text('no_description', lang)}\n\n"
+            f"{get_text('price', lang, price=course.price)}\n"
+            f"{get_text('dates', lang, start=start_date, end=end_date)}"
+        )
+
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=get_text("btn_edit", lang),
+                        callback_data=f"edit_course:{course.id}"
+                    ),
+                    InlineKeyboardButton(
+                        text=get_text("btn_delete", lang),
+                        callback_data=f"delete_course:{course.id}"
+                    )
+                ]
+            ]
+        )
+
+        await callback.message.answer(
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+
+    await callback.message.answer(
+        get_text("btn_admin_back", lang),
+        reply_markup=admin_back_keyboard(lang)
+    )
+    await callback.answer()
+
+
+@admin_router.callback_query(F.data.startswith("delete_course:"))
+async def delete_course(callback: CallbackQuery) -> None:
+    """
+    Удалить курс.
+
+    Args:
+        callback: Callback query с ID курса
+    """
+    if callback.from_user.id != ADMIN_ID:
+        lang = await get_user_language(callback.from_user.id)
+        await callback.answer(get_text("no_access", lang), show_alert=True)
+        return
+
+    lang = await get_user_language(callback.from_user.id)
+    course_id = int(callback.data.split(":")[1])
+
+    async with async_session() as session:
+        course = await session.get(Course, course_id)
+        if not course:
+            await callback.answer(
+                get_text("course_not_found", lang),
+                show_alert=True
+            )
+            return
+
+        course_title = course.title
+        await session.delete(course)
+        await session.commit()
+
+    try:
+        await callback.message.answer(
+            get_text("course_deleted", lang, title=course_title),
+            reply_markup=admin_back_keyboard(lang)
+        )
+        await callback.message.delete()
+    except Exception:
+        await callback.answer(
+            get_text("course_deleted", lang, title=course_title),
+            show_alert=True
+        )
+
+    await callback.answer()
+
+
+# ============ Добавление курса ============
+@admin_router.callback_query(F.data == "add_course")
+async def add_course_start(
+    callback: CallbackQuery,
+    state: FSMContext
+) -> None:
+    """
+    Начать процесс добавления курса.
+
+    Args:
+        callback: Callback query
+        state: FSM контекст
+    """
+    if callback.from_user.id != ADMIN_ID:
+        lang = await get_user_language(callback.from_user.id)
+        await callback.answer(get_text("no_access", lang), show_alert=True)
+        return
+
+    lang = await get_user_language(callback.from_user.id)
+
+    await state.set_state(AddCourseFSM.title)
+
+    try:
+        await callback.message.edit_text(
+            get_text("enter_course_title", lang)
+        )
+    except Exception:
+        await callback.message.answer(
+            get_text("enter_course_title", lang)
+        )
+
+    await callback.answer()
+
+
+@admin_router.message(AddCourseFSM.title)
+async def add_course_title(message: Message, state: FSMContext) -> None:
+    """
+    Обработать название нового курса.
+
+    Args:
+        message: Сообщение с названием
+        state: FSM контекст
+    """
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    lang = await get_user_language(message.from_user.id)
+
+    # Проверяем уникальность названия
+    async with async_session() as session:
+        result = await session.execute(
+            select(Course).where(Course.title == message.text.strip())
+        )
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            await message.answer(get_text("course_title_exists", lang))
+            return
+
+    await state.update_data(title=message.text.strip())
+    await state.set_state(AddCourseFSM.description)
+    await message.answer(get_text("enter_course_description", lang))
+
+
+@admin_router.message(AddCourseFSM.description)
+async def add_course_description(
+    message: Message,
+    state: FSMContext
+) -> None:
+    """
+    Обработать описание нового курса.
+
+    Args:
+        message: Сообщение с описанием
+        state: FSM контекст
+    """
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    lang = await get_user_language(message.from_user.id)
+    await state.update_data(description=message.text.strip())
+    await state.set_state(AddCourseFSM.price)
+    await message.answer(get_text("enter_course_price", lang))
+
+
+@admin_router.message(AddCourseFSM.price, F.text.regexp(r"^\d+$"))
+async def add_course_price(message: Message, state: FSMContext) -> None:
+    """
+    Обработать цену нового курса.
+
+    Args:
+        message: Сообщение с ценой
+        state: FSM контекст
+    """
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    lang = await get_user_language(message.from_user.id)
+    await state.update_data(price=int(message.text.strip()))
+    await state.set_state(AddCourseFSM.start_date)
+    await message.answer(get_text("enter_start_date", lang))
+
+
+@admin_router.message(AddCourseFSM.start_date)
+async def add_course_start_date(
+    message: Message,
+    state: FSMContext
+) -> None:
+    """
+    Обработать дату начала нового курса.
+
+    Args:
+        message: Сообщение с датой
+        state: FSM контекст
+    """
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    lang = await get_user_language(message.from_user.id)
+
+    try:
+        start_date = datetime.strptime(
+            message.text.strip(),
+            "%d.%m.%Y"
+        ).date()
+    except ValueError:
+        await message.answer(get_text("invalid_date_format", lang))
+        return
+
+    await state.update_data(start_date=start_date)
+    await state.set_state(AddCourseFSM.end_date)
+    await message.answer(get_text("enter_end_date", lang))
+
+
+@admin_router.message(AddCourseFSM.end_date)
+async def add_course_end_date(
+    message: Message,
+    state: FSMContext
+) -> None:
+    """
+    Обработать дату окончания и завершить добавление курса.
+
+    Args:
+        message: Сообщение с датой
+        state: FSM контекст
+    """
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    lang = await get_user_language(message.from_user.id)
+    data = await state.get_data()
+
+    try:
+        end_date = datetime.strptime(
+            message.text.strip(),
+            "%d.%m.%Y"
+        ).date()
+    except ValueError:
+        await message.answer(get_text("invalid_date_format", lang))
+        return
+
+    if end_date < data["start_date"]:
+        await message.answer(get_text("end_date_before_start", lang))
+        return
+
+    # Создаем новый курс
+    async with async_session() as session:
+        new_course = Course(
+            title=data["title"],
+            description=data["description"],
+            price=data["price"],
+            start_date=data["start_date"],
+            end_date=end_date
+        )
+        session.add(new_course)
+        await session.commit()
+
+    await message.answer(
+        get_text("course_added", lang, title=data["title"]),
+        reply_markup=admin_back_keyboard(lang)
+    )
+    await state.clear()
+
+
 # ============ Редактирование курса ============
 @admin_router.callback_query(F.data.startswith("edit_course:"))
 async def edit_course_start(
@@ -318,7 +630,7 @@ async def edit_course_start(
 ) -> None:
     """
     Начать процесс редактирования курса.
-    
+
     Args:
         callback: Callback query с ID курса
         state: FSM контекст
@@ -330,7 +642,7 @@ async def edit_course_start(
 
     lang = await get_user_language(callback.from_user.id)
     course_id = int(callback.data.split(":")[1])
-    
+
     async with async_session() as session:
         course = await session.get(Course, course_id)
         if not course:
@@ -342,17 +654,17 @@ async def edit_course_start(
 
     await state.update_data(course_id=course_id)
     await state.set_state(EditCourseFSM.title)
-    
+
     edit_text = (
         f"✏️ Редактирование курса «{course.title}»\n\n"
         f"Введите новое название курса (текущее: {course.title}):"
     )
-    
+
     try:
         await callback.message.edit_text(edit_text)
     except Exception:
         await callback.message.answer(edit_text)
-    
+
     await callback.answer()
 
 
@@ -360,15 +672,14 @@ async def edit_course_start(
 async def edit_course_title(message: Message, state: FSMContext) -> None:
     """
     Обработать новое название курса.
-    
+
     Args:
         message: Сообщение с названием
         state: FSM контекст
     """
     if message.from_user.id != ADMIN_ID:
         return
-        
-    lang = await get_user_language(message.from_user.id)
+
     await state.update_data(new_title=message.text.strip())
     await state.set_state(EditCourseFSM.description)
     await message.answer("Введите новое описание курса:")
@@ -381,15 +692,14 @@ async def edit_course_description(
 ) -> None:
     """
     Обработать новое описание курса.
-    
+
     Args:
         message: Сообщение с описанием
         state: FSM контекст
     """
     if message.from_user.id != ADMIN_ID:
         return
-        
-    lang = await get_user_language(message.from_user.id)
+
     await state.update_data(new_description=message.text.strip())
     await state.set_state(EditCourseFSM.price)
     await message.answer("Введите новую цену курса:")
@@ -399,15 +709,14 @@ async def edit_course_description(
 async def edit_course_price(message: Message, state: FSMContext) -> None:
     """
     Обработать новую цену курса.
-    
+
     Args:
         message: Сообщение с ценой
         state: FSM контекст
     """
     if message.from_user.id != ADMIN_ID:
         return
-        
-    lang = await get_user_language(message.from_user.id)
+
     await state.update_data(new_price=int(message.text.strip()))
     await state.set_state(EditCourseFSM.start_date)
     await message.answer(
@@ -422,16 +731,16 @@ async def edit_course_start_date(
 ) -> None:
     """
     Обработать новую дату начала курса.
-    
+
     Args:
         message: Сообщение с датой
         state: FSM контекст
     """
     if message.from_user.id != ADMIN_ID:
         return
-        
+
     lang = await get_user_language(message.from_user.id)
-    
+
     try:
         start_date = datetime.strptime(
             message.text.strip(),
@@ -440,7 +749,7 @@ async def edit_course_start_date(
     except ValueError:
         await message.answer(get_text("invalid_date_format", lang))
         return
-    
+
     await state.update_data(new_start_date=start_date)
     await state.set_state(EditCourseFSM.end_date)
     await message.answer(
@@ -455,17 +764,17 @@ async def edit_course_end_date(
 ) -> None:
     """
     Обработать новую дату окончания и завершить редактирование.
-    
+
     Args:
         message: Сообщение с датой
         state: FSM контекст
     """
     if message.from_user.id != ADMIN_ID:
         return
-        
+
     lang = await get_user_language(message.from_user.id)
     data = await state.get_data()
-    
+
     try:
         end_date = datetime.strptime(
             message.text.strip(),
@@ -496,7 +805,7 @@ async def edit_course_end_date(
             )
         )
         existing_course = result.scalar_one_or_none()
-        
+
         if existing_course:
             await message.answer(get_text("course_title_exists", lang))
             await state.clear()
@@ -508,7 +817,7 @@ async def edit_course_end_date(
         course.price = data["new_price"]
         course.start_date = data["new_start_date"]
         course.end_date = end_date
-        
+
         await session.commit()
 
     await message.answer(
@@ -526,7 +835,7 @@ async def add_certificate_start(
 ) -> None:
     """
     Начать процесс выдачи сертификата.
-    
+
     Args:
         callback: Callback query
         state: FSM контекст
@@ -537,7 +846,7 @@ async def add_certificate_start(
         return
 
     lang = await get_user_language(callback.from_user.id)
-    
+
     # Получаем список всех пользователей
     async with async_session() as session:
         result = await session.execute(select(User))
@@ -583,7 +892,7 @@ async def add_certificate_start(
             "👥 Выберите пользователя для выдачи сертификата:",
             reply_markup=keyboard
         )
-    
+
     await state.set_state(CertificateFSM.user_selector)
     await callback.answer()
 
@@ -598,7 +907,7 @@ async def certificate_user_selected(
 ) -> None:
     """
     Обработать выбор пользователя для сертификата.
-    
+
     Args:
         callback: Callback query с ID пользователя
         state: FSM контекст
@@ -606,13 +915,12 @@ async def certificate_user_selected(
     if callback.from_user.id != ADMIN_ID:
         return
 
-    lang = await get_user_language(callback.from_user.id)
     user_id = int(callback.data.split(":")[1])
-    
+
     # Сохраняем ID пользователя
     await state.update_data(selected_user_id=user_id)
     await state.set_state(CertificateFSM.title)
-    
+
     try:
         await callback.message.edit_text(
             "📝 Введите название сертификата:"
@@ -621,7 +929,7 @@ async def certificate_user_selected(
         await callback.message.answer(
             "📝 Введите название сертификата:"
         )
-    
+
     await callback.answer()
 
 
@@ -632,26 +940,25 @@ async def certificate_title_entered(
 ) -> None:
     """
     Обработать название сертификата.
-    
+
     Args:
         message: Сообщение с названием
         state: FSM контекст
     """
     if message.from_user.id != ADMIN_ID:
         return
-        
-    lang = await get_user_language(message.from_user.id)
+
     title = message.text.strip()
-    
+
     if len(title) < MIN_CERTIFICATE_TITLE_LENGTH:
         await message.answer(
             "⚠️ Название сертификата должно содержать минимум 3 символа."
         )
         return
-    
+
     await state.update_data(certificate_title=title)
     await state.set_state(CertificateFSM.file)
-    
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -662,7 +969,7 @@ async def certificate_title_entered(
             ]
         ]
     )
-    
+
     await message.answer(
         "📄 Отправьте файл сертификата (документ) "
         "или нажмите 'Без файла' чтобы создать сертификат без файла:",
@@ -677,7 +984,7 @@ async def certificate_no_file(
 ) -> None:
     """
     Создать сертификат без файла.
-    
+
     Args:
         callback: Callback query
         state: FSM контекст
@@ -699,14 +1006,14 @@ async def certificate_file_received(
 ) -> None:
     """
     Обработать файл сертификата.
-    
+
     Args:
         message: Сообщение с документом
         state: FSM контекст
     """
     if message.from_user.id != ADMIN_ID:
         return
-        
+
     await create_certificate(
         message,
         state,
@@ -721,7 +1028,7 @@ async def create_certificate(
 ) -> None:
     """
     Создать сертификат и отправить уведомление пользователю.
-    
+
     Args:
         message: Сообщение для ответа
         state: FSM контекст
@@ -729,10 +1036,10 @@ async def create_certificate(
     """
     lang = await get_user_language(message.from_user.id)
     data = await state.get_data()
-    
+
     user_id = data.get("selected_user_id")
     title = data.get("certificate_title")
-    
+
     if not user_id or not title:
         await message.answer(
             "⚠️ Ошибка: данные не найдены. Попробуйте снова."
@@ -754,25 +1061,24 @@ async def create_certificate(
             title=title,
             file_id=file_id
         )
-        
+
         session.add(certificate)
         await session.commit()
 
         # Уведомляем пользователя
         if user.user_id:
             try:
-                user_lang = user.language or "ru"
                 notification_text = (
                     f"🏅 Поздравляем! Вам выдан сертификат:\n\n"
                     f"<b>{title}</b>"
                 )
-                
+
                 await message.bot.send_message(
                     user.user_id,
                     notification_text,
                     parse_mode="HTML"
                 )
-                
+
                 # Если есть файл, отправляем его
                 if file_id:
                     try:
@@ -785,7 +1091,7 @@ async def create_certificate(
                         print(
                             f"Ошибка при отправке файла сертификата: {e}"
                         )
-                        
+
             except Exception as e:
                 print(f"Ошибка при уведомлении пользователя: {e}")
 
@@ -796,7 +1102,7 @@ async def create_certificate(
     )
     if file_id:
         confirmation_text += " с файлом"
-    
+
     await message.answer(
         confirmation_text,
         reply_markup=admin_back_keyboard(lang)
@@ -809,15 +1115,14 @@ async def create_certificate(
 async def invalid_add_price(message: Message, state: FSMContext) -> None:
     """
     Обработать неправильный формат цены при добавлении курса.
-    
+
     Args:
         message: Входящее сообщение
         state: FSM контекст
     """
     if message.from_user.id != ADMIN_ID:
         return
-    
-    lang = await get_user_language(message.from_user.id)
+
     await message.answer("⚠️ Введите корректную цену (только цифры):")
 
 
@@ -825,15 +1130,14 @@ async def invalid_add_price(message: Message, state: FSMContext) -> None:
 async def invalid_edit_price(message: Message, state: FSMContext) -> None:
     """
     Обработать неправильный формат цены при редактировании курса.
-    
+
     Args:
         message: Входящее сообщение
         state: FSM контекст
     """
     if message.from_user.id != ADMIN_ID:
         return
-    
-    lang = await get_user_language(message.from_user.id)
+
     await message.answer("⚠️ Введите корректную цену (только цифры):")
 
 
@@ -844,14 +1148,14 @@ async def invalid_certificate_file(
 ) -> None:
     """
     Обработать неправильный формат файла сертификата.
-    
+
     Args:
         message: Входящее сообщение
         state: FSM контекст
     """
     if message.from_user.id != ADMIN_ID:
         return
-    
+
     await message.answer(
         "⚠️ Отправьте файл как документ или нажмите 'Без файла'"
     )
