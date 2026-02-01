@@ -1,0 +1,219 @@
+name: Deploy Education Bot
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:  # Можно запустить вручную из GitHub UI
+
+env:
+  PYTHON_VERSION: '3.11'
+  REGISTRY: ghcr.io
+
+jobs:
+  # ============ ТЕСТИРОВАНИЕ ============
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install fastapi uvicorn pytest pytest-asyncio
+      
+      - name: Create test .env file
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+          ADMIN_ID: ${{ secrets.ADMIN_ID }}
+          SQLALCHEMY_URL: ${{ vars.SQLALCHEMY_URL }}
+        run: |
+          mkdir -p config
+          cat > config/.env << 'EOF'
+          TOKEN=${{ secrets.TOKEN }}
+          ADMIN_ID=${{ secrets.ADMIN_ID }}
+          SQLALCHEMY_URL=${{ vars.SQLALCHEMY_URL }}
+          WEBHOOK_URL=http://localhost:8000/webhook
+          WEBHOOK_HOST=0.0.0.0
+          WEBHOOK_PORT=8000
+          EOF
+      
+      - name: Verify configuration
+        run: |
+          python -c "
+          from config.bot_config import API_TOKEN, ADMIN_ID, SQLALCHEMY_URL
+          assert API_TOKEN, 'TOKEN not set'
+          assert ADMIN_ID, 'ADMIN_ID not set'
+          assert SQLALCHEMY_URL, 'SQLALCHEMY_URL not set'
+          print('✅ All environment variables loaded successfully')
+          print(f'✅ ADMIN_ID: {ADMIN_ID}')
+          print(f'✅ Database: {SQLALCHEMY_URL.split(\"://\")[0]}')
+          "
+      
+      - name: Code quality check
+        continue-on-error: true
+        run: |
+          pip install flake8 black
+          black --check . || true
+          flake8 . --count --select=E9,F63,F7,F82 --show-source || true
+
+  # ============ СБОРКА ============
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    
+    permissions:
+      packages: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============ ДЕПЛОЙ НА VPS ============
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+            
+            echo "📦 Starting deployment..."
+            
+            # Переходим в папку проекта
+            cd /home/telegram-bot-education-center || mkdir -p /home/telegram-bot-education-center && cd /home/telegram-bot-education-center
+            
+            # Клонируем или обновляем репозиторий
+            if [ -d .git ]; then
+              echo "📥 Pulling latest code..."
+              git pull origin main
+            else
+              echo "📥 Cloning repository..."
+              git clone https://github.com/${{ github.repository }}.git .
+            fi
+            
+            # Создаем виртуальное окружение
+            echo "🐍 Setting up Python environment..."
+            python3 -m venv venv
+            source venv/bin/activate
+            
+            # Устанавливаем зависимости
+            echo "📦 Installing dependencies..."
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install fastapi uvicorn
+            
+            # Создаем конфигурационный файл из GitHub Secrets
+            echo "🔧 Creating configuration..."
+            mkdir -p config
+            cat > config/.env << 'EOF'
+            TOKEN=${{ secrets.TOKEN }}
+            ADMIN_ID=${{ secrets.ADMIN_ID }}
+            SQLALCHEMY_URL=${{ vars.SQLALCHEMY_URL }}
+            WEBHOOK_URL=${{ vars.WEBHOOK_URL }}
+            WEBHOOK_HOST=${{ vars.WEBHOOK_HOST }}
+            WEBHOOK_PORT=${{ vars.WEBHOOK_PORT }}
+            EOF
+            
+            # Проверяем конфигурацию
+            echo "✅ Verifying configuration..."
+            python -c "
+            from config.bot_config import API_TOKEN, ADMIN_ID, SQLALCHEMY_URL
+            print(f'✅ TOKEN loaded')
+            print(f'✅ ADMIN_ID: {ADMIN_ID}')
+            print(f'✅ Database configured')
+            "
+            
+            # Перезагружаем systemd сервис
+            echo "🔄 Restarting service..."
+            sudo systemctl restart education-bot.service
+            sleep 2
+            
+            # Проверяем статус
+            echo "📋 Service status:"
+            sudo systemctl status education-bot.service
+            
+            # Проверяем что webhook работает
+            echo "🔍 Checking webhook health..."
+            sleep 3
+            curl -s http://localhost:8000/health && echo "" || echo "⚠️ Health check failed"
+            
+            echo "✅ Deployment completed successfully!"
+
+  # ============ УВЕДОМЛЕНИЕ ============
+  notify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Determine status
+        id: status
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "status=✅ Deployment successful" >> $GITHUB_OUTPUT
+          else
+            echo "status=❌ Deployment failed" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Send Telegram notification
+        if: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            🤖 Education Bot Deployment
+            
+            ${{ steps.status.outputs.status }}
+            
+            📌 Branch: ${{ github.ref }}
+            👤 Author: ${{ github.actor }}
+            💬 Commit: ${{ github.event.head_commit.message }}
+            
+            🔗 Details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

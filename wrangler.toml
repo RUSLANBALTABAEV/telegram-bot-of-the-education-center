@@ -1,0 +1,20 @@
+// ============ Cloudflare Worker (wrangler.toml) ============
+/**
+ * Cloudflare Worker для проксирования webhook от Telegram
+ * к вашему Python серверу
+ */
+
+name = "education-bot-webhook"
+main = "src/index.js"
+compatibility_date = "2024-01-15"
+minify = true
+
+[env.production]
+vars = { 
+  PYTHON_BACKEND = "https://api.yourdomain.com",
+  BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
+}
+
+[[routes]]
+pattern = "yourdomain.com/webhook"
+zone_name = "yourdomain.com"
